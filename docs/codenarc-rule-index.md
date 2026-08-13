@@ -7,7 +7,7 @@ title: CodeNarc - Rule Index
 
 # Rule Index
 
-**CodeNarc** includes 407 rules.
+**CodeNarc** includes 408 rules.
     
 ## [Basic](./codenarc-rules-basic.html)
   * [AssertWithinFinallyBlock](./codenarc-rules-basic.html#assertwithinfinallyblock-rule)  
@@ -407,6 +407,7 @@ title: CodeNarc - Rule Index
 ## [Spock](./codenarc-rules-spock.html)
   * [SpockIgnoreRestUsed](./codenarc-rules-spock.html#spockignorerestused-rule)  
   * [SpockMissingAssert](./codenarc-rules-spock.html#spockmissingassert-rule)  
+  * [SpockUnnecessaryAssert](./codenarc-rules-spock.html#spockunnecessaryassert-rule)  
   * [SpockUseVerifyEach](./codenarc-rules-spock.html#spockuseverifyeach-rule)  
 
 ## [Unnecessary](./codenarc-rules-unnecessary.html)

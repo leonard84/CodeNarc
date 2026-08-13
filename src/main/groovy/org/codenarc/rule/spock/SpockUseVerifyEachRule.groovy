@@ -15,13 +15,9 @@
  */
 package org.codenarc.rule.spock
 
-import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
-import org.codehaus.groovy.ast.stmt.Statement
-import org.codenarc.rule.AbstractAstVisitor
-import org.codenarc.rule.AbstractAstVisitorRule
 
 /**
  * Detects usages of .every, .each, .eachWithIndex, and .forEach with assertions
@@ -29,41 +25,22 @@ import org.codenarc.rule.AbstractAstVisitorRule
  *
  * @author Leonard Brünings
  */
-class SpockUseVerifyEachRule extends AbstractAstVisitorRule {
+class SpockUseVerifyEachRule extends AbstractSpockRule {
 
     String name = 'SpockUseVerifyEach'
     int priority = 3
-    String specificationSuperclassNames = '*Specification'
-    String specificationClassNames = null
     boolean checkAllBlocks = true
     Class astVisitorClass = SpockUseVerifyEachAstVisitor
 }
 
-class SpockUseVerifyEachAstVisitor extends AbstractAstVisitor<SpockUseVerifyEachRule> {
+class SpockUseVerifyEachAstVisitor extends AbstractSpockAstVisitor<SpockUseVerifyEachRule> {
 
     private static final List<String> TARGET_METHODS = ['every', 'each', 'eachWithIndex', 'forEach']
 
-    private String currentLabel = null
-
-    @Override
-    SpockUseVerifyEachRule getRule() {
-        super.rule as SpockUseVerifyEachRule
-    }
-
-    @Override
-    void visitConstructorOrMethod(MethodNode node, boolean isConstructor) {
-        visitIfInSpockClass {
-            currentLabel = null
-            super.visitConstructorOrMethod(node, isConstructor)
-        }
-    }
-
     @Override
     void visitExpressionStatement(ExpressionStatement statement) {
-        visitIfInSpockClass {
-            updateCurrentLabel(statement)
-            checkForIterationWithAssertions(statement)
-        }
+        updateCurrentLabel(statement)
+        checkForIterationWithAssertions(statement)
     }
 
     private void checkForIterationWithAssertions(ExpressionStatement statement) {
@@ -79,9 +56,9 @@ class SpockUseVerifyEachAstVisitor extends AbstractAstVisitor<SpockUseVerifyEach
         if (closureArg == null) {
             return
         }
-        boolean inImplicitAssertBlock = SpockUtil.isImplicitAssertBlock(currentLabel) && currentLabel != 'filter'
+        boolean inImplicitAssertBlockExceptFilter = inImplicitAssertBlock && currentLabel != 'filter'
 
-        boolean shouldReport = inImplicitAssertBlock
+        boolean shouldReport = inImplicitAssertBlockExceptFilter
             ? isImplicitAssertionOverIteration(methodName, closureArg)
             : isExplicitAssertionOverIteration(methodName, closureArg)
 
@@ -98,21 +75,5 @@ class SpockUseVerifyEachAstVisitor extends AbstractAstVisitor<SpockUseVerifyEach
         rule.checkAllBlocks
             && methodName != 'every'
             && SpockUtil.closureContainsAssertions(closureArg, false)
-    }
-
-    private void updateCurrentLabel(Statement statement) {
-        List<String> labels = statement.statementLabels
-        if (labels != null) {
-            Collection<String> spockLabels = labels.intersect(SpockUtil.SPOCK_LABELS)
-            if (spockLabels.size() > 0) {
-                currentLabel = spockLabels.last()
-            }
-        }
-    }
-
-    private void visitIfInSpockClass(Closure callVisitorMethod) {
-        if (SpockUtil.isSpockSpecification(currentClassNode, rule.specificationSuperclassNames, rule.specificationClassNames)) {
-            callVisitorMethod()
-        }
     }
 }

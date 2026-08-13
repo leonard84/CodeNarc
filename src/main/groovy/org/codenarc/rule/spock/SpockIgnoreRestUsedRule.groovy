@@ -17,7 +17,6 @@ package org.codenarc.rule.spock
 
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
-import org.codenarc.rule.AbstractAstVisitorRule
 import org.codenarc.rule.AbstractMethodVisitor
 
 /**
@@ -28,12 +27,10 @@ import org.codenarc.rule.AbstractMethodVisitor
  * @author Stefan Armbruster
  * @author Chris Mair
   */
-class SpockIgnoreRestUsedRule extends AbstractAstVisitorRule {
+class SpockIgnoreRestUsedRule extends AbstractSpockRule {
 
     String name = 'SpockIgnoreRestUsed'
     int priority = 2
-    String specificationSuperclassNames = '*Specification'
-    String specificationClassNames = null
     Class astVisitorClass = SpockIgnoreRestUsedAstVisitor
 }
 
@@ -48,10 +45,7 @@ class SpockIgnoreRestUsedAstVisitor extends AbstractMethodVisitor {
 
     @Override
     void visitMethod(MethodNode node) {
-        def hasIgnoreRest = node.annotations.any {
-            it.classNode.nameWithoutPackage == 'IgnoreRest'
-        }
-        if (hasIgnoreRest) {
+        if (SpockUtil.hasAnnotation(node, 'IgnoreRest')) {
             addViolation(node, "The method '$node.name' in class $node.declaringClass.name uses @IgnoreRest")
         }
     }
