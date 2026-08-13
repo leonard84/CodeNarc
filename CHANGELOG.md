@@ -7,6 +7,7 @@ New Rules and RuleSets
 - #834: New **OneTopLevelClass** rule. ([rinsley](https://github.com/rinsley)
 - #835: Create new “spock” ruleset for Spock rules. Move three existing Spock rules into the new “spock” ruleset: `SpockIgnoreRestUsed`, `SpockMissingAssert`, `SpockUseVerifyEach`. NOTE: Disable those rules in the “junit” ruleset.
 - Add **SpockUnnecessaryAssert** rule, the inverse of **SpockMissingAssert**: it reports an `assert` without a message where Spock already applies an implicit condition. ([Leonard Brünings](https://github.com/leonard84))
+- Add **SpockUnnecessaryUnroll** rule: it reports an `@Unroll` without a value on a feature method or Specification class, because Spock 2 unrolls by default. An `@Unroll` carrying an iteration-name template, and one that re-enables unrolling under a `@Rollup`, are not reported. ([Leonard Brünings](https://github.com/leonard84))
 
 Updated/Enhanced Rules and Bug Fixes
 - #832: **ConfusingMethodNameRule** rule: Fix `ReadOnlyPropertyException` on Groovy 5 for a class with a field named `properties`. ([youdie006](https://github.com/youdie006))
