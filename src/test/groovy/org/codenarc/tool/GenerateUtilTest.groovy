@@ -18,6 +18,7 @@ package org.codenarc.tool
 import static org.codenarc.test.TestUtil.shouldFail
 
 import org.codenarc.rule.Rule
+import org.codenarc.rule.StubRule
 import org.codenarc.test.AbstractTestCase
 import org.junit.jupiter.api.Test
 
@@ -25,8 +26,14 @@ import org.junit.jupiter.api.Test
  * Tests for GenerateUtil
  *
  * @author Chris Mair
+ * @author Leonard Bruenings
   */
 class GenerateUtilTest extends AbstractTestCase {
+
+    private final StubRule rule = new StubRule(name: 'SomeRule')
+    private final StubRule ruleSetDisabledRule = new StubRule(name: 'SomeRuleSetDisabledRule', enabled: false)
+    private final DisabledByDefaultStubRule disabledByDefaultRule = new DisabledByDefaultStubRule(name: 'SomeDisabledByDefaultRule')
+    private final DeprecatedStubRule deprecatedRule = new DeprecatedStubRule(name: 'SomeRule')
 
     @Test
     void testGetRuleExtraInformation_ReturnsExpectedValuesFromPropertiesFile() {
@@ -79,6 +86,57 @@ class GenerateUtilTest extends AbstractTestCase {
     }
 
     @Test
+    void testGetRulesFromXmlRuleSet_ExcludesRulesThatTheRuleSetDisables() {
+        def ruleNames = GenerateUtil.getRulesFromXmlRuleSet('rulesets/junit.xml')*.name
+        assert ruleNames.contains('JUnitAssertAlwaysFails')
+        assert !ruleNames.contains('SpockMissingAssert')
+    }
+
+    @Test
+    void testGetRulesFromXmlRuleSet_KeepsRulesThatTheirOwnClassDisablesByDefault() {
+        def ruleNames = GenerateUtil.getRulesFromXmlRuleSet('rulesets/grails.xml')*.name
+        assert ruleNames.contains('GrailsPublicControllerMethod')
+    }
+
+    @Test
+    void testExcludeRulesNotToBeGenerated_RemovesRulesAnnotatedWithDeprecated() {
+        assert GenerateUtil.excludeRulesNotToBeGenerated([rule, deprecatedRule]) == [rule]
+    }
+
+    @Test
+    void testExcludeRulesNotToBeGenerated_RemovesRulesThatTheRuleSetEntryDisables() {
+        assert GenerateUtil.excludeRulesNotToBeGenerated([rule, ruleSetDisabledRule]) == [rule]
+    }
+
+    @Test
+    void testExcludeRulesNotToBeGenerated_KeepsRulesThatTheirOwnClassDisablesByDefault() {
+        assert GenerateUtil.excludeRulesNotToBeGenerated([rule, disabledByDefaultRule]) == [rule, disabledByDefaultRule]
+    }
+
+    @Test
+    void testExcludeRulesNotToBeGenerated_KeepsAllRulesWhenNoneIsDisabledOrDeprecated() {
+        assert GenerateUtil.excludeRulesNotToBeGenerated([rule]) == [rule]
+    }
+
+    @Test
+    void testExcludeRulesNotToBeGenerated_EmptyList() {
+        assert GenerateUtil.excludeRulesNotToBeGenerated([]) == []
+    }
+
+    @Test
+    void testCreateSortedListOfAllRules_ContainsNoDeprecatedRules() {
+        def rules = GenerateUtil.createSortedListOfAllRules()
+        assert rules
+        assert rules.every { r -> !r.class.isAnnotationPresent(Deprecated) }
+    }
+
+    @Test
+    void testCreateSortedListOfAllRules_RuleNamesAreUnique() {
+        def ruleNames = GenerateUtil.createSortedListOfAllRules()*.name
+        assert ruleNames.size() == ruleNames.toSet().size()
+    }
+
+    @Test
     void testSortRules_ReturnsRulesSortedByName() {
         def ruleB = [getName: { 'RuleB' }] as Rule
         def ruleC = [getName: { 'RuleC' }] as Rule
@@ -105,3 +163,14 @@ class GenerateUtilTest extends AbstractTestCase {
     }
 
 }
+
+class DisabledByDefaultStubRule extends StubRule {
+
+    DisabledByDefaultStubRule() {
+        enabled = false
+    }
+
+}
+
+@Deprecated
+class DeprecatedStubRule extends StubRule { }

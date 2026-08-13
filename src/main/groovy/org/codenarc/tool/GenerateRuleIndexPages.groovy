@@ -20,7 +20,6 @@ import org.codenarc.rule.Rule
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.codenarc.ruleset.RuleSets
-import org.codenarc.ruleset.XmlFileRuleSet
 
 /**
  * Java application (main() method) that generates the "codenarc-rule-index.md.template" file.
@@ -49,10 +48,10 @@ class GenerateRuleIndexPages {
         def numberOfRules = 0
         def ruleToRuleSetMap = new TreeMap({ a, b -> a.name <=> b.name })
         RuleSets.ALL_RULESET_FILES.each { ruleSetPath ->
-            def ruleSet = new XmlFileRuleSet(ruleSetPath)
             def ruleSetName = ruleSetPath - 'rulesets/' - '.xml'
-            rulesByRuleSet[ruleSetName] = GenerateUtil.sortRules(ruleSet.rules)
-            ruleSet.rules.each { rule ->
+            def rules = GenerateUtil.getRulesFromXmlRuleSet(ruleSetPath)
+            rulesByRuleSet[ruleSetName] = rules
+            rules.each { rule ->
                 ruleToRuleSetMap[rule] = ruleSetName
             }
             numberOfRules += rulesByRuleSet[ruleSetName].size()

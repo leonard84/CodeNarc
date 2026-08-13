@@ -1,7 +1,6 @@
 <!-- markdownlint-disable MD003 MD004 MD007 MD032 -->
 # CodeNarc Change Log
 
-
 TODO: Version 4.1.0  (xxx 2026)
 --------------------------------------
 New Rules and RuleSets
@@ -11,6 +10,10 @@ New Rules and RuleSets
 Updated/Enhanced Rules and Bug Fixes
 - #832: **ConfusingMethodNameRule** rule: Fix `ReadOnlyPropertyException` on Groovy 5 for a class with a field named `properties`. ([youdie006](https://github.com/youdie006))
 - #833: **MissingOverrideAnnotation** rule: Fix `MissingMethodException` on Groovy 5 when a superclass declares a `properties()` method.
+
+Build, Infrastructure and Tests
+- Add a `generateAll` Gradle task that runs `org.codenarc.tool.GenerateAll`, so the generated rule properties file, rule index pages and starter rule sets can be regenerated from the build. ([Leonard Brünings](https://github.com/leonard84))
+- `GenerateUtil`: Exclude rules that a rule set disables, and rules whose class is annotated with `@Deprecated`, from all generated files, so a rule that has moved to another rule set is listed once, under its new rule set. ([Leonard Brünings](https://github.com/leonard84))
 
 
 Version 4.0.0  (Jul 2026)

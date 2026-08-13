@@ -15,6 +15,7 @@
  */
  package org.codenarc.tool
 
+import org.codenarc.rule.Rule
 import org.codenarc.ruleset.RuleSets
 import org.codenarc.ruleset.XmlFileRuleSet
 import org.codenarc.util.io.ClassPathResource
@@ -40,7 +41,30 @@ class GenerateUtil {
 
     static List getRulesFromXmlRuleSet(String ruleSetPath) {
         def ruleSet = new XmlFileRuleSet(ruleSetPath)
-        sortRules(ruleSet.rules)
+        sortRules(excludeRulesNotToBeGenerated(ruleSet.rules))
+    }
+
+    /**
+     * Filter out the rules that must not show up in the generated files:
+     *  - a rule that its rule set entry disables. A rule set keeps such an entry only to document that the
+     *    rule used to be part of it; the rule is enabled in the rule set it has moved to, so listing both
+     *    entries would list the rule twice. A rule that its own class disables by default, such as
+     *    GrailsPublicControllerMethod, is still part of its rule set and is kept.
+     *  - a rule whose class is annotated with @Deprecated. Such a class is only a compatibility shim for
+     *    a rule that has moved to another package, and carries the same rule name as the rule it extends.
+     * @param rules - the rules to filter
+     * @return the rules that the generated files must list
+     */
+    static List excludeRulesNotToBeGenerated(List rules) {
+        rules.findAll { rule -> !isDisabledByRuleSet(rule) && !rule.class.isAnnotationPresent(Deprecated) }
+    }
+
+    /**
+     * @param rule - a rule as configured by its rule set
+     * @return true only if the rule set entry turned off a rule that its class enables by default
+     */
+    private static boolean isDisabledByRuleSet(Rule rule) {
+        !rule.enabled && rule.class.getDeclaredConstructor().newInstance().enabled
     }
 
     static List createSortedListOfAllRules() {
