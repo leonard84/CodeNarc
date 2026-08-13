@@ -6,8 +6,9 @@ TODO: Version 4.1.0  (xxx 2026)
 New Rules and RuleSets
 - #834: New **OneTopLevelClass** rule. ([rinsley](https://github.com/rinsley)
 - #835: Create new “spock” ruleset for Spock rules. Move three existing Spock rules into the new “spock” ruleset: `SpockIgnoreRestUsed`, `SpockMissingAssert`, `SpockUseVerifyEach`. NOTE: Disable those rules in the “junit” ruleset.
-- Add **SpockUnnecessaryAssert** rule, the inverse of **SpockMissingAssert**: it reports an `assert` without a message where Spock already applies an implicit condition. ([Leonard Brünings](https://github.com/leonard84))
-- Add **SpockUnnecessaryUnroll** rule: it reports an `@Unroll` without a value on a feature method or Specification class, because Spock 2 unrolls by default. An `@Unroll` carrying an iteration-name template, and one that re-enables unrolling under a `@Rollup`, are not reported. ([Leonard Brünings](https://github.com/leonard84))
+- #840: New **SpockUnnecessaryUnroll** rule: it reports an `@Unroll` without a value on a feature method or Specification class, because Spock 2 unrolls by default. An `@Unroll` carrying an iteration-name template, and one that re-enables unrolling under a `@Rollup`, are not reported. ([Leonard Brünings](https://github.com/leonard84))
+- #841: New **SpockUnnecessaryAssert** rule, the inverse of **SpockMissingAssert**: it reports an `assert` without a message where Spock already applies an implicit condition. ([Leonard Brünings](https://github.com/leonard84))
+- #842: New **SpockMissingReason** rule: Spock's `@Ignore`, `@PendingFeature` and `@Isolated` must state a reason, so that a disabled feature can be triaged and re-enabled. `@Requires`, `@IgnoreIf` and `@PendingFeatureIf` are only checked when the *checkConditionalAnnotations* property is enabled, and the *reasonRegex* property can additionally require the reason to match a pattern such as an issue id. ([Leonard Brünings](https://github.com/leonard84))
 
 Updated/Enhanced Rules and Bug Fixes
 - #832: **ConfusingMethodNameRule** rule: Fix `ReadOnlyPropertyException` on Groovy 5 for a class with a field named `properties`. ([youdie006](https://github.com/youdie006))
@@ -25,12 +26,12 @@ Version 4.0.0  (Jul 2026)
 --------------------------------------
 Breaking Changes
  - Drop support for Groovy 3.x.
- - The default CodeNarc artifact (compatible with both Groovy 5.x and 4.x) requires at least Java 11 at runtime. 
+ - The default CodeNarc artifact (compatible with both Groovy 5.x and 4.x) requires at least Java 11 at runtime.
  - The Groovy 4 variant of CodeNarc is available for use with Java 8+ and Groovy 4.
  - The Groovy 4-compatible variant is now published as a separate artifact, **CodeNarc-Groovy4**, using the same version number as the main **CodeNarc** artifact, rather than being distinguished by a `-groovy-4.0` version suffix on the same `CodeNarc` artifact.
 
 New / Updated Rules
- - #820: Add **SpockUseVerifyEach** rule, [Leonard Brünings](https://github.com/leonard84)) 
+ - #820: Add **SpockUseVerifyEach** rule, [Leonard Brünings](https://github.com/leonard84))
 
 Reports
  - #807: `SarifReportWriter`: New report writer for SARIF. ([Alexandre Garnier](https://github.com/zigarn))
@@ -49,7 +50,7 @@ Build, Infrastructure and Tests
  - #817: Make Groovy 5 the default build, drop Groovy 3 support. ([Jedrzej Serwa](https://github.com/jedrzejserwa))
  - #812: Streamline report writer tests. Add test for `GitlabCodeQualityReportWriter`.
  - #813: Upgrade to Shadow Gradle plugin 9.3.0. Do NOT publish the codenarc-all jar.
- - #809: Fix broken links in CodeNarc documentation. 
+ - #809: Fix broken links in CodeNarc documentation.
  - #814: Add GitHub Action to check for broken links in the documentation.
  - #815: Delete integration-test folder and its tests.
  - #822: Fix build status badge from Travis to GitHub. [Thomas Rasmussen](https://github.com/dauer)
@@ -142,7 +143,7 @@ New Rules
  - #738: New **NoScriptBindings** rule (concurrency) - Checks for global variables that are bound to a script; they can cause concurrency bugs. ([Josh Chorlton](https://github.com/jchorl))
 
 Updated/Enhanced Rules and Bug Fixes
- - #729: **Indentation** rule: Add optional *indentUnderLabel* property to allow indenting code underneath labels. ([Charalampos Makrylakis](https://github.com/xmac11)) 
+ - #729: **Indentation** rule: Add optional *indentUnderLabel* property to allow indenting code underneath labels. ([Charalampos Makrylakis](https://github.com/xmac11))
  - #725: **ImplicitReturnStatement** rule: Fix false positive for return within a synchronized block.
  - #733: **SpaceAfterOpeningBrace** rule: Fix false positive for Groovy 4 switch expressions.
  - #726: Fixed CodeNarc command-line `-sourcefiles` argument to use the `basedir` parameter (if specified), and work with paths relative to the current directory. Changed `FilesSourceAnalyzer` to default `baseDirectory` to  ‘.’ rather than `System.getProperty('user.dir')`.
@@ -161,7 +162,7 @@ Updated/Enhanced Rules and Bug Fixes
 
 Build, Infrastructure and Tests
  - Create GitHub Action "gradle.yml" to build+test on push or PR.
- - #724: Use Groovy 4.0.7 to build Groovy 4 CodeNarc jar. 
+ - #724: Use Groovy 4.0.7 to build Groovy 4 CodeNarc jar.
  - #708: Include internal results for files without violations, to enable accurate baseline reporting. ([Ulrich Eckhardt](https://github.com/UlrichEckhardt))
  - #717: Allow to send list of files in argument `sourcefiles` ([Nicolas Vuillamy](https://github.com/nvuillam))
 
@@ -219,7 +220,7 @@ Updated/Enhanced Rules and Bug Fixes
  - #670: **JUnitAssertEqualsConstantActualValue**: Support JUnit 5 `Assertions.assertEquals()`.
  - #671: **StaticMethodsBeforeInstanceMethods**: Ignore generated instance methods.
  - #672: **EmptyTryBlock**: Also support try-with-resources.
- - #675: **ExceptionExtendsError**: Exclude interfaces and classes that implement an "Error" interface. 
+ - #675: **ExceptionExtendsError**: Exclude interfaces and classes that implement an "Error" interface.
  - #675: **ExceptionExtendsThrowable**: Exclude interfaces and classes that implement a "Throwable" interface.
  - #676: **BracesForTryCatchFinally**: Fix false positive from try-with-resources.
  - #677: **UnnecessarySetter**: Fix false positive when the setter return value is used in a nested expression.
@@ -291,7 +292,7 @@ Updated/Enhanced Rules and Bug Fixes
  - #590: **ClassStartsWithBlankLine**: Fix NullPointerException on single-line class at very end of file (no newline).
  - #599: **SpaceAfterComma**: Fix false positive if source line contains Emoji (non-ASCII chars) on Groovy 3.
  - #603: **BracesForMethod**: Fix false positive on Groovy 3.0.7 for multi-line method declarations.
- - #577: **UnusedMethodParameter**: Ignore methods annotated with @Pointcut. 
+ - #577: **UnusedMethodParameter**: Ignore methods annotated with @Pointcut.
 
 Build and Infrastructure
  - #574: CodeNarc command-line: Support `-properties` command-line argument to specify name/location for "codenarc.properties" file.
@@ -300,7 +301,7 @@ Build and Infrastructure
  - #589: Upgrade to Groovy 2.5.14 (minor patch release), to address CVE-2020-17521. Note: CodeNarc does not use any of the vulnerable Groovy components.
  - #593: Command-line: Catch exception during rule processing, log error message with rule/filename and keep going.
  - #601: Publish Javadocs. <https://javadoc.io/doc/org.codenarc/CodeNarc>
- - #569: Adding the Compact Text Report Writer. ([Luís Zimmermann](https://github.com/luiszimmermann)) 
+ - #569: Adding the Compact Text Report Writer. ([Luís Zimmermann](https://github.com/luiszimmermann))
  - #598: JSON RuleSet: Fixed NPE, added some logging for an invalid rule name.
  - #605: `AbstractRuleTestCase`: Provide aliases for `assertViolations` Map keys: *lineNumber = line, sourceLineText = source, messageText = message*.
 
@@ -333,7 +334,7 @@ Updated/Enhanced Rules and Bug Fixes
  - #540: **Indentation** rule: Fix false positive violation on inline anonymous classes.
  - #551: **TrailingWhitespace** rule: Optimize execution time.
  - #556: **CodeNarcTask**: Close `URLClassLoader`.
- 
+
 CodeNarc Plugin Mechanism
  - #494: New `CodeNarcPlugin`
      * Add *plugins* property to the CodeNarc Ant Task (`CodeNarcTask`) and `-plugins` parameter to the command-line.
@@ -640,7 +641,7 @@ Updated/Enhanced Rules and Bug Fixes
    - #223: **UnusedVariable**: Don't count variable assignment as a reference (usage).
    - #230: **NoDef**: ClassCastException: ArgumentListExpression cannot be cast to VariableExpression.
    - #226: **UnusedPrivateField** rule should ignore fields annotated with `groovy.lang.Delegate`.
-   - #560: **UnnecessarySetter**: Use Groovy 2.4+ AST to improve violation message. 
+   - #560: **UnnecessarySetter**: Use Groovy 2.4+ AST to improve violation message.
 
 Framework and Infrastructure
    - #228: [BREAKING CHANGE] Upgrade to Groovy 2.3.
