@@ -1,9 +1,13 @@
 ---
 layout: default
 title: CodeNarc - Spock Rules
----  
+---
 
 # Spock Rules  ("*rulesets/spock.xml*")
+
+*This rule set was introduced in CodeNarc 4.1.0.* The **SpockIgnoreRestUsed**, **SpockMissingAssert** and
+**SpockUseVerifyEach** rules moved here from the [JUnit](./codenarc-rules-junit.html) rule set; their entries in
+*rulesets/junit.xml* are disabled by default and will be removed in a future release.
 
 
 ## SpockIgnoreRestUsed Rule
@@ -25,20 +29,20 @@ Spock *Specification* classes.
 Example of violations:
 
 ```
-public class MySpec extends spock.lang.Specification {
-@spock.lang.IgnoreRest
-def "my first feature"() {
-expect: false
-}
+    public class MySpec extends spock.lang.Specification {
+        @spock.lang.IgnoreRest
+        def "my first feature"() {
+            expect: false
+        }
 
-def "my second feature"() {
-given: def a = 2
+        def "my second feature"() {
+            given: def a = 2
 
-when: a *= 2
+            when: a *= 2
 
-then: a == 4
-}
-}
+            then: a == 4
+        }
+    }
 ```
 
 
@@ -55,23 +59,23 @@ produce false positives, as it relies on method names to determine whether an ex
 Example of violations:
 
 ```
-public class MySpec extends spock.lang.Specification {
-def "test passes - does not behave as expected"() {
-expect:
-if (true) {
-true == false // violation - is inside an if block, and therefore not treated as an implicit assertion by spock
-}
-}
+    public class MySpec extends spock.lang.Specification {
+        def "test passes - does not behave as expected"() {
+            expect:
+            if (true) {
+                true == false // violation - is inside an if block, and therefore not treated as an implicit assertion by spock
+            }
+        }
 
-def "test fails - behaves as expected"() {
-expect:
-if (true) {
-with(new Object()) {
-true == false // no violation - expressions in with are treated as implicit assertions by spock
-}
-}
-}
-}
+        def "test fails - behaves as expected"() {
+            expect:
+            if (true) {
+                with(new Object()) {
+                    true == false // no violation - expressions in with are treated as implicit assertions by spock
+                }
+            }
+        }
+    }
 ```
 
 | Property                    | Description            | Default Value    |
@@ -98,20 +102,20 @@ explicit `assert` statements in other blocks (e.g., `given:`, `when:`) and in he
 Example of violations:
 
 ```
-class MySpec extends spock.lang.Specification {
-def "test"() {
-given:
-def list = [1, 2, 3]
+    class MySpec extends spock.lang.Specification {
+        def "test"() {
+            given:
+            def list = [1, 2, 3]
 
-expect:
-list.every { it > 0 }                   // violation - use verifyEach(list) { it > 0 }
-list.each { assert it > 0 }              // violation - use verifyEach(list) { it > 0 }
-list.eachWithIndex { item, i ->
-assert item > 0                      // violation - use verifyEach(list) { item, i -> item > 0 }
-}
-list.forEach { assert it > 0 }           // violation - use verifyEach(list) { it > 0 }
-}
-}
+            expect:
+            list.every { it > 0 }                   // violation - use verifyEach(list) { it > 0 }
+            list.each { assert it > 0 }              // violation - use verifyEach(list) { it > 0 }
+            list.eachWithIndex { item, i ->
+                assert item > 0                      // violation - use verifyEach(list) { item, i -> item > 0 }
+            }
+            list.forEach { assert it > 0 }           // violation - use verifyEach(list) { it > 0 }
+        }
+    }
 ```
 
 | Property                    | Description            | Default Value    |
@@ -121,5 +125,4 @@ list.forEach { assert it > 0 }           // violation - use verifyEach(list) { i
 | specificationSuperclassNames| Specifies one or more (comma-separated) class names that should be treated as Spock Specification superclasses. In other words, a class that extends a matching class name is considered a Spock Specification . The class names may optionally contain wildcards (*,?), e.g. "*Spec". | "*Specification" |
 
 **NOTE:** This rule requires Spock 2.4+ which introduces the `verifyEach` method. If you are using an older version of Spock, disable this rule.
-
 
