@@ -254,6 +254,7 @@ ruleset {
     ObjectFinalize 
     ObjectOverrideMisspelledMethodName 
     ObjectOverrideOnlyNonCpsMethods 
+    OneTopLevelClass 
     OptionalCollectionReturnType 
     OptionalField 
     OptionalMethodParameter 
