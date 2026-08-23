@@ -126,6 +126,7 @@ ruleset {
     NoFloat 
     NoJavaUtilDate 
     NoTabCharacter 
+    OneTopLevelClass 
     ParameterReassignment 
     PublicMethodsBeforeNonPublicMethods 
     StaticFieldsBeforeInstanceFields 
@@ -336,9 +337,6 @@ ruleset {
     JUnitUnnecessarySetUp 
     JUnitUnnecessaryTearDown 
     JUnitUnnecessaryThrowsException 
-    SpockIgnoreRestUsed 
-    SpockMissingAssert 
-    SpockUseVerifyEach 
     UnnecessaryFail 
     UseAssertEqualsInsteadOfAssertTrue 
     UseAssertFalseInsteadOfNegation 
@@ -402,6 +400,11 @@ ruleset {
     MethodSize 
     NestedBlockDepth 
     ParameterCount 
+    
+    // rulesets/spock.xml
+    SpockIgnoreRestUsed 
+    SpockMissingAssert 
+    SpockUseVerifyEach 
     
     // rulesets/unnecessary.xml
     AddEmptyString 

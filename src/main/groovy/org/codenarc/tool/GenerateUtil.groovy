@@ -29,6 +29,17 @@ class GenerateUtil {
     private static final String RULE_EXTRA_INFO_FILE = 'codenarc-rule-extrainfo.properties'
     private static Properties ruleExtraInformation
 
+    /**
+     * The rules that the generated files must not list for a rule set, keyed by rule set path.
+     *
+     * A rule set keeps a disabled entry for a rule that has moved to another rule set, so that an existing
+     * configuration referring to that rule by name still resolves. The generated files must list such a rule
+     * only once, under the rule set that it has moved to.
+     */
+    protected static final Map<String, List<String>> RULES_EXCLUDED_FROM_GENERATED_FILES = [
+        'rulesets/junit.xml': ['SpockIgnoreRestUsed', 'SpockMissingAssert', 'SpockUseVerifyEach'].asImmutable(),
+    ].asImmutable()
+
     static Properties getRuleExtraInformation() {
         if (ruleExtraInformation) {
             return ruleExtraInformation
@@ -40,7 +51,19 @@ class GenerateUtil {
 
     static List getRulesFromXmlRuleSet(String ruleSetPath) {
         def ruleSet = new XmlFileRuleSet(ruleSetPath)
-        sortRules(ruleSet.rules)
+        sortRules(excludeRulesNotToBeGenerated(ruleSetPath, ruleSet.rules))
+    }
+
+    /**
+     * Filter out the rules that the generated files must not list for a rule set.
+     * @param ruleSetPath - the path of the rule set that the rules come from
+     * @param rules - the rules configured by that rule set
+     * @return the rules that the generated files must list for that rule set
+     * @see #RULES_EXCLUDED_FROM_GENERATED_FILES
+     */
+    static List excludeRulesNotToBeGenerated(String ruleSetPath, List rules) {
+        def excludedRuleNames = RULES_EXCLUDED_FROM_GENERATED_FILES[ruleSetPath] ?: []
+        rules.findAll { rule -> !(rule.name in excludedRuleNames) }
     }
 
     static List createSortedListOfAllRules() {

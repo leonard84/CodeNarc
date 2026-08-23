@@ -7,7 +7,7 @@ title: CodeNarc - Rule Index
 
 # Rule Index
 
-**CodeNarc** includes 406 rules.
+**CodeNarc** includes 407 rules.
     
 ## [Basic](./codenarc-rules-basic.html)
   * [AssertWithinFinallyBlock](./codenarc-rules-basic.html#assertwithinfinallyblock-rule)  
@@ -129,6 +129,7 @@ title: CodeNarc - Rule Index
   * [NoFloat](./codenarc-rules-convention.html#nofloat-rule)  
   * [NoJavaUtilDate](./codenarc-rules-convention.html#nojavautildate-rule)  
   * [NoTabCharacter](./codenarc-rules-convention.html#notabcharacter-rule)  
+  * [OneTopLevelClass](./codenarc-rules-convention.html#onetoplevelclass-rule)  
   * [ParameterReassignment](./codenarc-rules-convention.html#parameterreassignment-rule)  
   * [PublicMethodsBeforeNonPublicMethods](./codenarc-rules-convention.html#publicmethodsbeforenonpublicmethods-rule)  
   * [StaticFieldsBeforeInstanceFields](./codenarc-rules-convention.html#staticfieldsbeforeinstancefields-rule)  
@@ -339,9 +340,6 @@ title: CodeNarc - Rule Index
   * [JUnitUnnecessarySetUp](./codenarc-rules-junit.html#junitunnecessarysetup-rule)  
   * [JUnitUnnecessaryTearDown](./codenarc-rules-junit.html#junitunnecessaryteardown-rule)  
   * [JUnitUnnecessaryThrowsException](./codenarc-rules-junit.html#junitunnecessarythrowsexception-rule)  
-  * [SpockIgnoreRestUsed](./codenarc-rules-junit.html#spockignorerestused-rule)  
-  * [SpockMissingAssert](./codenarc-rules-junit.html#spockmissingassert-rule)  
-  * [SpockUseVerifyEach](./codenarc-rules-junit.html#spockuseverifyeach-rule)  
   * [UnnecessaryFail](./codenarc-rules-junit.html#unnecessaryfail-rule)  
   * [UseAssertEqualsInsteadOfAssertTrue](./codenarc-rules-junit.html#useassertequalsinsteadofasserttrue-rule)  
   * [UseAssertFalseInsteadOfNegation](./codenarc-rules-junit.html#useassertfalseinsteadofnegation-rule)  
@@ -405,6 +403,11 @@ title: CodeNarc - Rule Index
   * [MethodSize](./codenarc-rules-size.html#methodsize-rule)  
   * [NestedBlockDepth](./codenarc-rules-size.html#nestedblockdepth-rule)  
   * [ParameterCount](./codenarc-rules-size.html#parametercount-rule)  
+
+## [Spock](./codenarc-rules-spock.html)
+  * [SpockIgnoreRestUsed](./codenarc-rules-spock.html#spockignorerestused-rule)  
+  * [SpockMissingAssert](./codenarc-rules-spock.html#spockmissingassert-rule)  
+  * [SpockUseVerifyEach](./codenarc-rules-spock.html#spockuseverifyeach-rule)  
 
 ## [Unnecessary](./codenarc-rules-unnecessary.html)
   * [AddEmptyString](./codenarc-rules-unnecessary.html#addemptystring-rule)  

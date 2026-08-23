@@ -18,6 +18,8 @@ package org.codenarc.tool
 import static org.codenarc.test.TestUtil.shouldFail
 
 import org.codenarc.rule.Rule
+import org.codenarc.rule.StubRule
+import org.codenarc.ruleset.XmlFileRuleSet
 import org.codenarc.test.AbstractTestCase
 import org.junit.jupiter.api.Test
 
@@ -25,8 +27,14 @@ import org.junit.jupiter.api.Test
  * Tests for GenerateUtil
  *
  * @author Chris Mair
+ * @author Leonard Bruenings
   */
 class GenerateUtilTest extends AbstractTestCase {
+
+    private static final String RULE_SET_WITH_EXCLUDED_RULES = 'rulesets/junit.xml'
+
+    private final StubRule rule = new StubRule(name: 'SomeRule')
+    private final StubRule otherRule = new StubRule(name: 'SomeOtherRule')
 
     @Test
     void testGetRuleExtraInformation_ReturnsExpectedValuesFromPropertiesFile() {
@@ -79,6 +87,68 @@ class GenerateUtilTest extends AbstractTestCase {
     }
 
     @Test
+    void testGetRulesFromXmlRuleSet_ExcludesTheRulesExcludedForThatRuleSet() {
+        def ruleNames = GenerateUtil.getRulesFromXmlRuleSet(RULE_SET_WITH_EXCLUDED_RULES)*.name
+        assert ruleNames.contains('JUnitAssertAlwaysFails')
+        assert !ruleNames.contains('SpockMissingAssert')
+    }
+
+    @Test
+    void testGetRulesFromXmlRuleSet_KeepsARuleThatOnlyAnotherRuleSetExcludes() {
+        def ruleNames = GenerateUtil.getRulesFromXmlRuleSet('rulesets/spock.xml')*.name
+        assert ruleNames.contains('SpockMissingAssert')
+    }
+
+    @Test
+    void testGetRulesFromXmlRuleSet_KeepsRulesThatTheirOwnClassDisablesByDefault() {
+        def ruleNames = GenerateUtil.getRulesFromXmlRuleSet('rulesets/grails.xml')*.name
+        assert ruleNames.contains('GrailsPublicControllerMethod')
+    }
+
+    @Test
+    void testExcludeRulesNotToBeGenerated_RemovesTheRulesExcludedForThatRuleSet() {
+        def excludedRuleName = GenerateUtil.RULES_EXCLUDED_FROM_GENERATED_FILES[RULE_SET_WITH_EXCLUDED_RULES].first()
+        def excludedRule = new StubRule(name: excludedRuleName)
+
+        assert GenerateUtil.excludeRulesNotToBeGenerated(RULE_SET_WITH_EXCLUDED_RULES, [rule, excludedRule]) == [rule]
+    }
+
+    @Test
+    void testExcludeRulesNotToBeGenerated_KeepsAllRulesForARuleSetWithoutExclusions() {
+        assert GenerateUtil.excludeRulesNotToBeGenerated('rulesets/basic.xml', [rule, otherRule]) == [rule, otherRule]
+    }
+
+    @Test
+    void testExcludeRulesNotToBeGenerated_EmptyList() {
+        assert GenerateUtil.excludeRulesNotToBeGenerated(RULE_SET_WITH_EXCLUDED_RULES, []) == []
+    }
+
+    @Test
+    void testRulesExcludedFromGeneratedFiles_EachExcludedRuleIsStillDefinedByItsRuleSet() {
+        GenerateUtil.RULES_EXCLUDED_FROM_GENERATED_FILES.each { ruleSetPath, excludedRuleNames ->
+            def ruleNames = new XmlFileRuleSet(ruleSetPath).rules*.name
+            excludedRuleNames.each { excludedRuleName ->
+                assert excludedRuleName in ruleNames,
+                    "$ruleSetPath no longer defines $excludedRuleName; remove it from RULES_EXCLUDED_FROM_GENERATED_FILES"
+            }
+        }
+    }
+
+    @Test
+    void testRulesExcludedFromGeneratedFiles_EachExcludedRuleIsGeneratedForAnotherRuleSet() {
+        def allRuleNames = GenerateUtil.createSortedListOfAllRules()*.name
+        GenerateUtil.RULES_EXCLUDED_FROM_GENERATED_FILES.values().flatten().each { excludedRuleName ->
+            assert excludedRuleName in allRuleNames
+        }
+    }
+
+    @Test
+    void testCreateSortedListOfAllRules_RuleNamesAreUnique() {
+        def ruleNames = GenerateUtil.createSortedListOfAllRules()*.name
+        assert ruleNames.size() == ruleNames.toSet().size()
+    }
+
+    @Test
     void testSortRules_ReturnsRulesSortedByName() {
         def ruleB = [getName: { 'RuleB' }] as Rule
         def ruleC = [getName: { 'RuleC' }] as Rule
@@ -105,3 +175,4 @@ class GenerateUtilTest extends AbstractTestCase {
     }
 
 }
+

@@ -35,6 +35,9 @@ VariableName.finalRegex=null
 If running **CodeNarc** against Spock code, you can copy the below into your `codenarc.properties` file.
 Alternatively, you can set these config fields within your ruleset files (though the syntax will be slightly different).
 
+See also the [Spock Rules](./codenarc-rules-spock.html) ("*rulesets/spock.xml*") rule set, which holds the rules
+that are specific to Spock specifications.
+
 ```
 # Do not not complain about non-standard method names in Spec classes. 
 # Admittedly this will also skip checking “regular” helper methods in those classes.

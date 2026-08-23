@@ -5,6 +5,7 @@
 
     <description>
         Spock rule set.
+        These rules implement standards and best practices related to Spock specifications.
     </description>
 
     <rule class='org.codenarc.rule.spock.SpockIgnoreRestUsedRule'/>
