@@ -19,6 +19,7 @@ import static org.codenarc.test.TestUtil.shouldFail
 
 import org.codenarc.rule.Rule
 import org.codenarc.rule.StubRule
+import org.codenarc.ruleset.XmlFileRuleSet
 import org.codenarc.test.AbstractTestCase
 import org.junit.jupiter.api.Test
 
@@ -30,10 +31,10 @@ import org.junit.jupiter.api.Test
   */
 class GenerateUtilTest extends AbstractTestCase {
 
+    private static final String RULE_SET_WITH_EXCLUDED_RULES = 'rulesets/junit.xml'
+
     private final StubRule rule = new StubRule(name: 'SomeRule')
-    private final StubRule ruleSetDisabledRule = new StubRule(name: 'SomeRuleSetDisabledRule', enabled: false)
-    private final DisabledByDefaultStubRule disabledByDefaultRule = new DisabledByDefaultStubRule(name: 'SomeDisabledByDefaultRule')
-    private final DeprecatedStubRule deprecatedRule = new DeprecatedStubRule(name: 'SomeRule')
+    private final StubRule otherRule = new StubRule(name: 'SomeOtherRule')
 
     @Test
     void testGetRuleExtraInformation_ReturnsExpectedValuesFromPropertiesFile() {
@@ -86,10 +87,16 @@ class GenerateUtilTest extends AbstractTestCase {
     }
 
     @Test
-    void testGetRulesFromXmlRuleSet_ExcludesRulesThatTheRuleSetDisables() {
-        def ruleNames = GenerateUtil.getRulesFromXmlRuleSet('rulesets/junit.xml')*.name
+    void testGetRulesFromXmlRuleSet_ExcludesTheRulesExcludedForThatRuleSet() {
+        def ruleNames = GenerateUtil.getRulesFromXmlRuleSet(RULE_SET_WITH_EXCLUDED_RULES)*.name
         assert ruleNames.contains('JUnitAssertAlwaysFails')
         assert !ruleNames.contains('SpockMissingAssert')
+    }
+
+    @Test
+    void testGetRulesFromXmlRuleSet_KeepsARuleThatOnlyAnotherRuleSetExcludes() {
+        def ruleNames = GenerateUtil.getRulesFromXmlRuleSet('rulesets/spock.xml')*.name
+        assert ruleNames.contains('SpockMissingAssert')
     }
 
     @Test
@@ -99,35 +106,40 @@ class GenerateUtilTest extends AbstractTestCase {
     }
 
     @Test
-    void testExcludeRulesNotToBeGenerated_RemovesRulesAnnotatedWithDeprecated() {
-        assert GenerateUtil.excludeRulesNotToBeGenerated([rule, deprecatedRule]) == [rule]
+    void testExcludeRulesNotToBeGenerated_RemovesTheRulesExcludedForThatRuleSet() {
+        def excludedRuleName = GenerateUtil.RULES_EXCLUDED_FROM_GENERATED_FILES[RULE_SET_WITH_EXCLUDED_RULES].first()
+        def excludedRule = new StubRule(name: excludedRuleName)
+
+        assert GenerateUtil.excludeRulesNotToBeGenerated(RULE_SET_WITH_EXCLUDED_RULES, [rule, excludedRule]) == [rule]
     }
 
     @Test
-    void testExcludeRulesNotToBeGenerated_RemovesRulesThatTheRuleSetEntryDisables() {
-        assert GenerateUtil.excludeRulesNotToBeGenerated([rule, ruleSetDisabledRule]) == [rule]
-    }
-
-    @Test
-    void testExcludeRulesNotToBeGenerated_KeepsRulesThatTheirOwnClassDisablesByDefault() {
-        assert GenerateUtil.excludeRulesNotToBeGenerated([rule, disabledByDefaultRule]) == [rule, disabledByDefaultRule]
-    }
-
-    @Test
-    void testExcludeRulesNotToBeGenerated_KeepsAllRulesWhenNoneIsDisabledOrDeprecated() {
-        assert GenerateUtil.excludeRulesNotToBeGenerated([rule]) == [rule]
+    void testExcludeRulesNotToBeGenerated_KeepsAllRulesForARuleSetWithoutExclusions() {
+        assert GenerateUtil.excludeRulesNotToBeGenerated('rulesets/basic.xml', [rule, otherRule]) == [rule, otherRule]
     }
 
     @Test
     void testExcludeRulesNotToBeGenerated_EmptyList() {
-        assert GenerateUtil.excludeRulesNotToBeGenerated([]) == []
+        assert GenerateUtil.excludeRulesNotToBeGenerated(RULE_SET_WITH_EXCLUDED_RULES, []) == []
     }
 
     @Test
-    void testCreateSortedListOfAllRules_ContainsNoDeprecatedRules() {
-        def rules = GenerateUtil.createSortedListOfAllRules()
-        assert rules
-        assert rules.every { r -> !r.class.isAnnotationPresent(Deprecated) }
+    void testRulesExcludedFromGeneratedFiles_EachExcludedRuleIsStillDefinedByItsRuleSet() {
+        GenerateUtil.RULES_EXCLUDED_FROM_GENERATED_FILES.each { ruleSetPath, excludedRuleNames ->
+            def ruleNames = new XmlFileRuleSet(ruleSetPath).rules*.name
+            excludedRuleNames.each { excludedRuleName ->
+                assert excludedRuleName in ruleNames,
+                    "$ruleSetPath no longer defines $excludedRuleName; remove it from RULES_EXCLUDED_FROM_GENERATED_FILES"
+            }
+        }
+    }
+
+    @Test
+    void testRulesExcludedFromGeneratedFiles_EachExcludedRuleIsGeneratedForAnotherRuleSet() {
+        def allRuleNames = GenerateUtil.createSortedListOfAllRules()*.name
+        GenerateUtil.RULES_EXCLUDED_FROM_GENERATED_FILES.values().flatten().each { excludedRuleName ->
+            assert excludedRuleName in allRuleNames
+        }
     }
 
     @Test
@@ -164,13 +176,3 @@ class GenerateUtilTest extends AbstractTestCase {
 
 }
 
-class DisabledByDefaultStubRule extends StubRule {
-
-    DisabledByDefaultStubRule() {
-        enabled = false
-    }
-
-}
-
-@Deprecated
-class DeprecatedStubRule extends StubRule { }

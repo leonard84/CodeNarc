@@ -15,7 +15,6 @@
  */
  package org.codenarc.tool
 
-import org.codenarc.rule.Rule
 import org.codenarc.ruleset.RuleSets
 import org.codenarc.ruleset.XmlFileRuleSet
 import org.codenarc.util.io.ClassPathResource
@@ -30,6 +29,17 @@ class GenerateUtil {
     private static final String RULE_EXTRA_INFO_FILE = 'codenarc-rule-extrainfo.properties'
     private static Properties ruleExtraInformation
 
+    /**
+     * The rules that the generated files must not list for a rule set, keyed by rule set path.
+     *
+     * A rule set keeps a disabled entry for a rule that has moved to another rule set, so that an existing
+     * configuration referring to that rule by name still resolves. The generated files must list such a rule
+     * only once, under the rule set that it has moved to.
+     */
+    protected static final Map<String, List<String>> RULES_EXCLUDED_FROM_GENERATED_FILES = [
+        'rulesets/junit.xml': ['SpockIgnoreRestUsed', 'SpockMissingAssert', 'SpockUseVerifyEach'].asImmutable(),
+    ].asImmutable()
+
     static Properties getRuleExtraInformation() {
         if (ruleExtraInformation) {
             return ruleExtraInformation
@@ -41,30 +51,19 @@ class GenerateUtil {
 
     static List getRulesFromXmlRuleSet(String ruleSetPath) {
         def ruleSet = new XmlFileRuleSet(ruleSetPath)
-        sortRules(excludeRulesNotToBeGenerated(ruleSet.rules))
+        sortRules(excludeRulesNotToBeGenerated(ruleSetPath, ruleSet.rules))
     }
 
     /**
-     * Filter out the rules that must not show up in the generated files:
-     *  - a rule that its rule set entry disables. A rule set keeps such an entry only to document that the
-     *    rule used to be part of it; the rule is enabled in the rule set it has moved to, so listing both
-     *    entries would list the rule twice. A rule that its own class disables by default, such as
-     *    GrailsPublicControllerMethod, is still part of its rule set and is kept.
-     *  - a rule whose class is annotated with @Deprecated. Such a class is only a compatibility shim for
-     *    a rule that has moved to another package, and carries the same rule name as the rule it extends.
-     * @param rules - the rules to filter
-     * @return the rules that the generated files must list
+     * Filter out the rules that the generated files must not list for a rule set.
+     * @param ruleSetPath - the path of the rule set that the rules come from
+     * @param rules - the rules configured by that rule set
+     * @return the rules that the generated files must list for that rule set
+     * @see #RULES_EXCLUDED_FROM_GENERATED_FILES
      */
-    static List excludeRulesNotToBeGenerated(List rules) {
-        rules.findAll { rule -> !isDisabledByRuleSet(rule) && !rule.class.isAnnotationPresent(Deprecated) }
-    }
-
-    /**
-     * @param rule - a rule as configured by its rule set
-     * @return true only if the rule set entry turned off a rule that its class enables by default
-     */
-    private static boolean isDisabledByRuleSet(Rule rule) {
-        !rule.enabled && rule.class.getDeclaredConstructor().newInstance().enabled
+    static List excludeRulesNotToBeGenerated(String ruleSetPath, List rules) {
+        def excludedRuleNames = RULES_EXCLUDED_FROM_GENERATED_FILES[ruleSetPath] ?: []
+        rules.findAll { rule -> !(rule.name in excludedRuleNames) }
     }
 
     static List createSortedListOfAllRules() {
