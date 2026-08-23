@@ -13,8 +13,9 @@ Updated/Enhanced Rules and Bug Fixes
 
 Build, Infrastructure and Tests
 - Add a `generateAll` Gradle task that runs `org.codenarc.tool.GenerateAll`, so the generated rule properties file, rule index pages and starter rule sets can be regenerated from the build. ([Leonard Brünings](https://github.com/leonard84))
-- `GenerateUtil`: Exclude rules that a rule set disables, and rules whose class is annotated with `@Deprecated`, from all generated files, so a rule that has moved to another rule set is listed once, under its new rule set. ([Leonard Brünings](https://github.com/leonard84))
-- Add `GeneratedFilesUpToDateTest`, which fails the build when the checked-in generated files no longer match what `generateAll` produces. Drop the generation timestamp from the `codenarc-base-rules.properties` header, so that generation is reproducible. This caught the **OneTopLevelClass** rule missing from `codenarc-base-rules.properties` and from the rule index pages. ([Leonard Brünings](https://github.com/leonard84))
+- `GenerateUtil`: Add `RULES_EXCLUDED_FROM_GENERATED_FILES`, the central list of the rules that the generated files must not list for a rule set, so a rule that has moved to another rule set is listed once, under its new rule set. ([Leonard Brünings](https://github.com/leonard84))
+- Drop the generation timestamp from the `codenarc-base-rules.properties` header, so that regenerating produces no spurious diff. ([Leonard Brünings](https://github.com/leonard84))
+- Regenerate the rule properties file, the rule index pages and the starter rule sets. They were out of date: the **OneTopLevelClass** rule was missing from `codenarc-base-rules.properties` (so `PropertiesFileRuleRegistry` could not resolve it by name) and from both rule index pages. ([Leonard Brünings](https://github.com/leonard84))
 
 
 Version 4.0.0  (Jul 2026)

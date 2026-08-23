@@ -132,8 +132,7 @@ def groovy4Test = tasks.register('groovy4Test', Test) {
 tasks.named('check') { dependsOn(groovy4Test) }
 
 // Regenerates codenarc-base-rules.properties, the two rule index pages and the two starter rule sets.
-// Those files are generated - never hand-edit them; run this task after adding, moving or removing a rule.
-// GeneratedFilesUpToDateTest fails the build if the checked-in copies do not match what this task produces.
+// Those files are generated - never hand-edit them; run this task to refresh them.
 tasks.register('generateAll', JavaExec) {
     group = 'documentation'
     description = 'Regenerate the rule properties file, the rule index pages and the starter rule sets'
