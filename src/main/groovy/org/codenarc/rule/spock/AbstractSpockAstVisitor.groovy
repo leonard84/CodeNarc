@@ -56,6 +56,9 @@ import org.codenarc.rule.AbstractAstVisitor
  *
  * @author Leonard Bruenings
  */
+// A visitor has to override one visitXxx method per statement type it tracks, so the method count
+// is artificially high.
+@SuppressWarnings('MethodCount')
 abstract class AbstractSpockAstVisitor<R extends AbstractSpockRule> extends AbstractAstVisitor<R> {
 
     private boolean spockSpecification = false
@@ -132,6 +135,15 @@ abstract class AbstractSpockAstVisitor<R extends AbstractSpockRule> extends Abst
      */
     protected boolean isInClosure() {
         !closureContexts.isEmpty()
+    }
+
+    /**
+     * @return 0 outside of any closure, incremented once for every enclosing closure. Unlike
+     *         {@link #getNestingDepth()} this only counts closures, not <code>if</code>/<code>for</code>/
+     *         <code>while</code>/<code>switch</code>/<code>try</code> statements.
+     */
+    protected int getClosureDepth() {
+        closureContexts.size()
     }
 
     /**

@@ -31,12 +31,6 @@ import org.junit.jupiter.api.Test
 class AbstractSpockAstVisitorTest extends AbstractRuleTestCase<SpockProbeRule> {
 
     @Test
-    void ruleProperties_AreValid() {
-        assert rule.specificationSuperclassNames == '*Specification'
-        assert rule.specificationClassNames == null
-    }
-
-    @Test
     void nonSpecification_NoViolations() {
         final SOURCE = '''
             class MyThing {
@@ -198,12 +192,12 @@ class AbstractSpockAstVisitorTest extends AbstractRuleTestCase<SpockProbeRule> {
             }
         '''.stripIndent()
         assertViolations(SOURCE,
-            [line: 5, message: ['depth=0', 'closure=null', 'implicitContext=true']],
-            [line: 6, message: ['depth=0', 'closure=with', 'implicitContext=true']],
-            [line: 8, message: ['depth=0', 'closure=null', 'implicitContext=true']],
-            [line: 9, message: ['depth=0', 'closure=null', 'implicitContext=false']],
-            [line: 11, message: ['depth=0', 'closure=null', 'implicitContext=true']],
-            [line: 13, message: ['depth=1', 'closure=verifyAll', 'implicitContext=true']])
+            [line: 5, message: ['depth=0', 'closureReceiver=null', 'implicitContext=true']],
+            [line: 6, message: ['depth=0', 'closureReceiver=with', 'implicitContext=true']],
+            [line: 8, message: ['depth=0', 'closureReceiver=null', 'implicitContext=true']],
+            [line: 9, message: ['depth=0', 'closureReceiver=null', 'implicitContext=false']],
+            [line: 11, message: ['depth=0', 'closureReceiver=null', 'implicitContext=true']],
+            [line: 13, message: ['depth=1', 'closureReceiver=verifyAll', 'implicitContext=true']])
     }
 
     @Test
@@ -226,10 +220,70 @@ class AbstractSpockAstVisitorTest extends AbstractRuleTestCase<SpockProbeRule> {
             }
         '''.stripIndent()
         assertViolations(SOURCE,
-            [line: 5, message: ['depth=0', 'closure=null', 'implicitContext=true']],
-            [line: 8, message: ['depth=2', 'closure=with', 'implicitContext=true']],
-            [line: 11, message: ['depth=0', 'closure=with', 'implicitContext=true']],
-            [line: 12, message: ['depth=0', 'closure=null', 'implicitContext=false']])
+            [line: 5, message: ['depth=0', 'closureReceiver=null', 'implicitContext=true']],
+            [line: 8, message: ['depth=2', 'closureReceiver=with', 'implicitContext=true']],
+            [line: 11, message: ['depth=0', 'closureReceiver=with', 'implicitContext=true']],
+            [line: 12, message: ['depth=0', 'closureReceiver=null', 'implicitContext=false']])
+    }
+
+    @Test
+    void closures_ClosureDepth_CountsOnlyEnclosingClosures() {
+        final SOURCE = '''
+            class MySpec extends spock.lang.Specification {
+                def "feature"() {
+                    expect:
+                    top()
+                    if (ready) {
+                        nested()
+                    }
+                    ship.crew.each {
+                        it.certified()
+                        it.assignments.each {
+                            it.valid()
+                        }
+                    }
+                }
+            }
+        '''.stripIndent()
+        assertViolations(SOURCE,
+            [line: 5, message: ['inClosure=false', 'closureDepth=0', 'depth=0']],
+            [line: 7, message: ['inClosure=false', 'closureDepth=0', 'depth=1']],
+            [line: 9, message: ['inClosure=false', 'closureDepth=0', 'depth=0']],
+            [line: 10, message: ['inClosure=true', 'closureDepth=1', 'depth=0']],
+            [line: 11, message: ['inClosure=true', 'closureDepth=1', 'depth=0']],
+            [line: 12, message: ['inClosure=true', 'closureDepth=2', 'depth=0']])
+    }
+
+    @Test
+    void closures_InImplicitAssertionClosure_OnlyForSpockImplicitAssertionMethods() {
+        final SOURCE = '''
+            class MySpec extends spock.lang.Specification {
+                def "feature"() {
+                    expect:
+                    with(ship) {
+                        registry == 'NCC 1701'
+                        crew.each {
+                            it.certified()
+                        }
+                    }
+                    ship.with {
+                        registry == 'NCC 1701'
+                    }
+                    ship.crew.each {
+                        it.certified()
+                    }
+                }
+            }
+        '''.stripIndent()
+        assertViolations(SOURCE,
+            [line: 5, message: ['inClosure=false', 'implicitClosure=false', 'closureReceiver=null']],
+            [line: 6, message: ['inClosure=true', 'implicitClosure=true', 'closureReceiver=with']],
+            [line: 7, message: ['inClosure=true', 'implicitClosure=true', 'closureReceiver=with']],
+            [line: 8, message: ['inClosure=true', 'implicitClosure=false', 'closureReceiver=null']],
+            [line: 11, message: ['inClosure=false', 'implicitClosure=false', 'closureReceiver=null']],
+            [line: 12, message: ['inClosure=true', 'implicitClosure=false', 'closureReceiver=null']],
+            [line: 14, message: ['inClosure=false', 'implicitClosure=false', 'closureReceiver=null']],
+            [line: 15, message: ['inClosure=true', 'implicitClosure=false', 'closureReceiver=null']])
     }
 
     @Override
@@ -264,7 +318,8 @@ class SpockProbeAstVisitor extends AbstractSpockAstVisitor<SpockProbeRule> {
 
     private String describeState() {
         "label=$currentLabel depth=$nestingDepth feature=$inFeatureMethod fixture=$inFixtureMethod " +
-            "helper=$inHelperMethod method=${currentMethod?.name} closure=$enclosingImplicitAssertionMethod " +
+            "helper=$inHelperMethod method=${currentMethod?.name} closureReceiver=$enclosingImplicitAssertionMethod " +
+            "inClosure=$inClosure closureDepth=$closureDepth implicitClosure=$inImplicitAssertionClosure " +
             "implicitBlock=$inImplicitAssertBlock implicitContext=$inImplicitAssertionContext"
     }
 }

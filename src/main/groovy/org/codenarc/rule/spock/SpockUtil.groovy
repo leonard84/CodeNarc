@@ -261,8 +261,13 @@ class SpockUtil {
      * declaration expression that assigns it, in which case the declared type of the variable is used
      * as a fallback: <code>Foo foo = Mock()</code>.
      *
+     * The type is only ever read from the source: from an explicit type argument, or from the
+     * declared type of the variable it is assigned to. An untyped <code>def foo = Mock()</code> names
+     * the type nowhere and Spock infers it at runtime, so it stays unresolvable here - this is not a
+     * limitation that a classpath or a later compiler phase would lift.
+     *
      * @param expression - a mock creation expression or a declaration whose right-hand side creates a mock
-     * @return the mocked type, or null if it cannot be determined without a classpath
+     * @return the mocked type, or null if the source does not name it
      */
     static ClassNode mockedType(Expression expression) {
         Expression mockExpression = expression

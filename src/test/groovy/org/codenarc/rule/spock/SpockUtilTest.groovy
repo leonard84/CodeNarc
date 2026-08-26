@@ -57,7 +57,7 @@ class SpockUtilTest extends AbstractTestCase {
     '''.stripIndent()
 
     @Test
-    void hasAnnotation_AnnotationOnMethod_True() {
+    void hasAnnotation_MethodAnnotations_AreDetected() {
         assert SpockUtil.hasAnnotation(method(ANNOTATED_SOURCE, 'MySpec', 'annotated feature'), 'IgnoreRest')
         assert !SpockUtil.hasAnnotation(method(ANNOTATED_SOURCE, 'MySpec', 'plain feature'), 'IgnoreRest')
         assert !SpockUtil.hasAnnotation(null, 'IgnoreRest')
@@ -90,7 +90,7 @@ class SpockUtilTest extends AbstractTestCase {
     }
 
     @Test
-    void hasAnnotationOnMethodOrClass_AnnotationOnSuperclassInSameSourceUnit_True() {
+    void hasAnnotationOnMethodOrClass_MethodAndSuperclassAnnotations_AreDetected() {
         assert SpockUtil.hasAnnotationOnMethodOrClass(method(ANNOTATED_SOURCE, 'MySpec', 'annotated feature'), 'IgnoreRest')
         assert SpockUtil.hasAnnotationOnMethodOrClass(method(ANNOTATED_SOURCE, 'MySpec', 'plain feature'), 'Stepwise')
         assert !SpockUtil.hasAnnotationOnMethodOrClass(method(ANNOTATED_SOURCE, 'MySpec', 'plain feature'), 'IgnoreRest')
@@ -104,7 +104,7 @@ class SpockUtilTest extends AbstractTestCase {
     }
 
     @Test
-    void isFixtureMethod_SpockFixtureMethods_True() {
+    void isFixtureMethod_SpockFixtureMethods_AreRecognized() {
         final SOURCE = '''
             class MySpec extends spock.lang.Specification {
                 def setup() { }
@@ -128,7 +128,7 @@ class SpockUtilTest extends AbstractTestCase {
     }
 
     @Test
-    void mockCreation_AllFactoryMethods_AreRecognized() {
+    void isMockCreation_AllFactoryMethods_AreRecognized() {
         final SOURCE = '''
             class MySpec extends spock.lang.Specification {
                 def "feature"() {
