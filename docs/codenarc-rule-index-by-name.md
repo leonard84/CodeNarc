@@ -7,7 +7,7 @@ title: CodeNarc - Rule Index by Name
 
 # Rule Index by Name
 
-**CodeNarc** includes 407 rules.
+**CodeNarc** includes 408 rules.
 
 ## Rules
   * [AbcMetric](./codenarc-rules-size.html#abcmetric-rule)    (Requires the GMetrics jar)
@@ -310,6 +310,7 @@ title: CodeNarc - Rule Index by Name
   * [SpaceInsideParentheses](./codenarc-rules-formatting.html#spaceinsideparentheses-rule)  
   * [SpockIgnoreRestUsed](./codenarc-rules-spock.html#spockignorerestused-rule)  
   * [SpockMissingAssert](./codenarc-rules-spock.html#spockmissingassert-rule)  
+  * [SpockUnnecessaryAssert](./codenarc-rules-spock.html#spockunnecessaryassert-rule)  
   * [SpockUseVerifyEach](./codenarc-rules-spock.html#spockuseverifyeach-rule)  
   * [StatelessClass](./codenarc-rules-generic.html#statelessclass-rule)  
   * [StatelessSingleton](./codenarc-rules-design.html#statelesssingleton-rule)  

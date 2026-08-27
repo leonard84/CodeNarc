@@ -15,12 +15,20 @@
  */
 package org.codenarc.rule.spock
 
+import org.codehaus.groovy.ast.AnnotatedNode
+import org.codehaus.groovy.ast.AnnotationNode
+import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.ModuleNode
 import org.codehaus.groovy.ast.expr.BinaryExpression
+import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.DeclarationExpression
+import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.TupleExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.AssertStatement
 import org.codehaus.groovy.ast.stmt.BlockStatement
@@ -45,6 +53,10 @@ class SpockUtil {
     static final List<String> METHODS_WITH_IMPLICIT_ASSERTIONS = ['with', 'verifyAll', 'verifyEach']
 
     static final List<String> METHODS_FOR_COLLECTION_ITERATION = ['each', 'eachWithIndex', 'times']
+
+    static final List<String> FIXTURE_METHOD_NAMES = ['setup', 'cleanup', 'setupSpec', 'cleanupSpec']
+
+    static final List<String> MOCK_FACTORY_METHODS = ['Mock', 'Stub', 'Spy', 'GroovyMock', 'GroovyStub', 'GroovySpy']
 
     private static final List<Pattern> BOOLEAN_METHOD_PATTERNS = [
         ~/^is(\p{Lu}.*)?/,
@@ -150,6 +162,161 @@ class SpockUtil {
             }
             return false
         }
+    }
+
+    /**
+     * @param node - the annotated node (class, method, field, ...)
+     * @param simpleName - the annotation name without its package, e.g. 'IgnoreRest'
+     * @return true if the node carries an annotation with that simple name
+     */
+    static boolean hasAnnotation(AnnotatedNode node, String simpleName) {
+        return findAnnotation(node, simpleName) != null
+    }
+
+    /**
+     * @param node - the annotated node (class, method, field, ...)
+     * @param simpleName - the annotation name without its package, e.g. 'IgnoreRest'
+     * @return the first annotation with that simple name, or null if there is none
+     */
+    static AnnotationNode findAnnotation(AnnotatedNode node, String simpleName) {
+        return node?.annotations?.find { AnnotationNode annotation ->
+            annotation.classNode.nameWithoutPackage == simpleName
+        }
+    }
+
+    /**
+     * Return true if the method itself, its declaring class, or any superclass of the declaring class
+     * <em>declared in the same source file</em> carries the annotation.
+     *
+     * CodeNarc runs without a classpath, so a superclass that lives in another file cannot be
+     * resolved and is therefore not inspected. Absence of evidence must not produce a violation.
+     *
+     * @param node - the method
+     * @param simpleName - the annotation name without its package, e.g. 'Stepwise'
+     * @return true if the annotation was found on the method or on a resolvable enclosing class
+     */
+    static boolean hasAnnotationOnMethodOrClass(MethodNode node, String simpleName) {
+        if (node == null) {
+            return false
+        }
+        if (hasAnnotation(node, simpleName)) {
+            return true
+        }
+        ModuleNode module = node.declaringClass?.module
+        ClassNode currentClass = node.declaringClass
+        Set<String> visitedClassNames = [] as Set
+        while (currentClass != null && visitedClassNames.add(currentClass.name)) {
+            if (hasAnnotation(currentClass, simpleName)) {
+                return true
+            }
+            currentClass = findSuperClassInSameSourceUnit(currentClass, module)
+        }
+        return false
+    }
+
+    /**
+     * @param annotation - the annotation, may be null
+     * @param member - the member name; use 'value' for the implicit member
+     * @return the member's value expression, or null if the annotation does not set that member
+     */
+    static Expression getAnnotationMember(AnnotationNode annotation, String member) {
+        return annotation?.getMember(member)
+    }
+
+    /**
+     * @param node - the method
+     * @return true if the method is one of Spock's fixture methods (setup, cleanup, setupSpec,
+     *         cleanupSpec) declared without parameters
+     */
+    static boolean isFixtureMethod(MethodNode node) {
+        return node != null && node.name in FIXTURE_METHOD_NAMES && (node.parameters == null || node.parameters.length == 0)
+    }
+
+    /**
+     * @param expression - the expression to inspect
+     * @return true if the expression creates a Spock mock, i.e. a call to Mock/Stub/Spy/GroovyMock/
+     *         GroovyStub/GroovySpy, with or without a type argument and with or without a trailing
+     *         initializer closure
+     */
+    static boolean isMockCreation(Expression expression) {
+        return mockKind(expression) != null
+    }
+
+    /**
+     * @param expression - the expression to inspect
+     * @return the name of the mock factory method ('Mock', 'Stub', 'Spy', 'GroovyMock', 'GroovyStub',
+     *         'GroovySpy'), or null if the expression does not create a mock
+     */
+    static String mockKind(Expression expression) {
+        if (!(expression instanceof MethodCallExpression)) {
+            return null
+        }
+        MethodCallExpression methodCall = expression as MethodCallExpression
+        String methodName = getMethodName(methodCall)
+        return methodName in MOCK_FACTORY_METHODS ? methodName : null
+    }
+
+    /**
+     * Determine the type being mocked. Pass either the mock creation expression itself, or the
+     * declaration expression that assigns it, in which case the declared type of the variable is used
+     * as a fallback: <code>Foo foo = Mock()</code>.
+     *
+     * The type is only ever read from the source: from an explicit type argument, or from the
+     * declared type of the variable it is assigned to. An untyped <code>def foo = Mock()</code> names
+     * the type nowhere and Spock infers it at runtime, so it stays unresolvable here - this is not a
+     * limitation that a classpath or a later compiler phase would lift.
+     *
+     * @param expression - a mock creation expression or a declaration whose right-hand side creates a mock
+     * @return the mocked type, or null if the source does not name it
+     */
+    static ClassNode mockedType(Expression expression) {
+        Expression mockExpression = expression
+        ClassNode declaredType = null
+        if (expression instanceof DeclarationExpression) {
+            DeclarationExpression declaration = expression as DeclarationExpression
+            mockExpression = declaration.rightExpression
+            if (declaration.leftExpression instanceof VariableExpression) {
+                VariableExpression variable = declaration.leftExpression as VariableExpression
+                declaredType = variable.dynamicTyped ? null : variable.type
+            }
+        }
+        if (!isMockCreation(mockExpression)) {
+            return null
+        }
+        ClassNode typeArgument = findClassArgument(mockExpression as MethodCallExpression)
+        return typeArgument ?: declaredType
+    }
+
+    private static ClassNode findSuperClassInSameSourceUnit(ClassNode classNode, ModuleNode module) {
+        ClassNode superClass = classNode.superClass
+        if (superClass == null || module == null) {
+            return null
+        }
+        // At the CONVERSION compiler phase the superclass reference is not resolved yet, so look the
+        // class up by name among the classes declared in the same source unit.
+        return module.classes.find { ClassNode candidate ->
+            candidate.name == superClass.name || candidate.nameWithoutPackage == superClass.nameWithoutPackage
+        }
+    }
+
+    private static ClassNode findClassArgument(MethodCallExpression methodCall) {
+        Expression arguments = methodCall.arguments
+        if (!(arguments instanceof TupleExpression)) {
+            return null
+        }
+        for (Expression argument : (arguments as TupleExpression).expressions) {
+            if (argument instanceof ClassExpression) {
+                return (argument as ClassExpression).type
+            }
+            // At the CONVERSION compiler phase a bare type name is still an unresolved VariableExpression
+            if (argument instanceof VariableExpression) {
+                String name = (argument as VariableExpression).name
+                if (name && Character.isUpperCase(name.charAt(0))) {
+                    return ClassHelper.make(name)
+                }
+            }
+        }
+        return null
     }
 
     private SpockUtil() { }

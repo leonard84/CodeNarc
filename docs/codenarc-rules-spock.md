@@ -51,7 +51,9 @@ Example of violations:
 *Since CodeNarc 3.3.0*
 
 Spock treats all expressions on the first level of a then or expect block as an implicit assertion.
-However, everything inside if/for/switch/... blocks is not an implicit assert, just a useless comparison (unless wrapped by a `with` or `verifyAll`).
+However, everything inside if/for/switch/... blocks is not an implicit assert, just a useless comparison - unless it is
+inside a `with`, `verifyAll` or `verifyEach` closure, which turns *every* expression of its closure into a condition,
+nested ones included.
 
 This rule finds such expressions, where an explicit call to `assert` would be required. Please note that the rule might
 produce false positives, as it relies on method names to determine whether an expression has a boolean type or not.
@@ -73,6 +75,68 @@ Example of violations:
                 with(new Object()) {
                     true == false // no violation - expressions in with are treated as implicit assertions by spock
                 }
+            }
+        }
+    }
+```
+
+| Property                    | Description            | Default Value    |
+|-----------------------------|------------------------|------------------|
+| specificationClassNames     | Specifies one or more (comma-separated) class names that should be treated as Spock Specification classes. The class names may optionally contain wildcards (*,?), e.g. "*Spec". | `null` |
+| specificationSuperclassNames| Specifies one or more (comma-separated) class names that should be treated as Spock Specification superclasses. In other words, a class that extends a matching class name is considered a Spock Specification . The class names may optionally contain wildcards (*,?), e.g. "*Spec". | "*Specification" |
+
+
+## SpockUnnecessaryAssert Rule
+
+*Since CodeNarc 4.1.0*
+
+Spock treats every top-level expression of a `then:`, `expect:` or `filter:` block - and *every* expression of a
+`with`, `verifyAll` or `verifyEach` closure, including the ones nested inside `if`/`for`/`while`/`switch`/`try` - as an
+implicit condition. An explicit `assert` there is redundant: it compiles to the same condition and it obscures the fact
+that the surrounding block is an assertion block.
+
+This rule is the exact inverse of [SpockMissingAssert](#spockmissingassert-rule): it reports only where that rule stays
+silent, and it never reports where that rule demands an explicit `assert`. In particular, an `assert` is *not* reported
+when it
+
+* carries a message (`assert result.valid : "after $stimulus"`, or Groovy's comma form
+  `assert result.valid, "after $stimulus"`) - an implicit condition cannot carry one, so this is the documented way to
+  add context,
+* is in a block without implicit conditions (`given:`, `when:`, `cleanup:`, `where:`),
+* is nested inside an `if`/`for`/`while`/`switch`/`try` statement of a `then:`/`expect:`/`filter:` block, where Spock
+  does *not* add implicit conditions. Note that inside a `with`/`verifyAll`/`verifyEach` closure the same nesting *is*
+  reported, because there Spock asserts every expression, not just the top-level ones,
+* is inside a plain helper method,
+* or is inside a closure that is not a `with`/`verifyAll`/`verifyEach` body - such as a stub or callback closure
+  (`>> { assert ... }`) or an `each { assert ... }` closure, where the `assert` is what makes the check run at all.
+  Only the unqualified Spock methods count here; `obj.with { }` is Groovy's `Object.with`, which does not add
+  implicit conditions.
+
+Example of violations:
+
+```
+    class MySpec extends spock.lang.Specification {
+        def "test"() {
+            expect:
+            assert result == 42                       // violation - 'expect:' conditions are implicit
+
+            when:
+            def ship = launch()
+
+            then:
+            assert ship.launched                      // violation - 'then:' conditions are implicit
+            with(ship) {
+                assert registry == 'NCC 1701'         // violation - 'with' conditions are implicit
+                if (warpCapable) {
+                    assert warpFactor > 1             // violation - 'with' asserts nested expressions as well
+                }
+            }
+            assert ship.crew : "after $stimulus"      // no violation - an implicit condition cannot carry a message
+            if (ship.warpCapable) {
+                assert ship.warpFactor > 1            // no violation - nested conditions of 'then:' are not implicit
+            }
+            ship.crew.each {
+                assert it.certified                   // no violation - closure is not a 'with'/'verifyAll'/'verifyEach' body
             }
         }
     }

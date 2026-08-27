@@ -404,6 +404,7 @@ ruleset {
     // rulesets/spock.xml
     SpockIgnoreRestUsed 
     SpockMissingAssert 
+    SpockUnnecessaryAssert 
     SpockUseVerifyEach 
     
     // rulesets/unnecessary.xml

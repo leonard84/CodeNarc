@@ -306,6 +306,7 @@ ruleset {
     SpaceInsideParentheses 
     SpockIgnoreRestUsed 
     SpockMissingAssert 
+    SpockUnnecessaryAssert 
     SpockUseVerifyEach 
     StatelessClass 
     StatelessSingleton 

@@ -19,21 +19,13 @@ import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.expr.DeclarationExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.AssertStatement
-import org.codehaus.groovy.ast.stmt.DoWhileStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
-import org.codehaus.groovy.ast.stmt.ForStatement
-import org.codehaus.groovy.ast.stmt.IfStatement
-import org.codehaus.groovy.ast.stmt.Statement
-import org.codehaus.groovy.ast.stmt.SwitchStatement
-import org.codehaus.groovy.ast.stmt.TryCatchStatement
-import org.codehaus.groovy.ast.stmt.WhileStatement
-
-import org.codenarc.rule.AbstractAstVisitor
-import org.codenarc.rule.AbstractAstVisitorRule
 
 /**
  * Spock treats all expressions on the first level of a then or expect block as an implicit assertion. However,
- * everything inside if/for/switch/... blocks is not an implicit assert, just a useless comparison (unless wrapped by a `with` or `verifyAll`).
+ * everything inside if/for/switch/... blocks is not an implicit assert, just a useless comparison - unless it is inside
+ * a `with`, `verifyAll` or `verifyEach` closure, which turns every expression of its closure into a condition, nested
+ * ones included.
  *
  * This rule finds such expressions, where an explicit call to assert would be required. Please note that the rule might
  * produce false positives, as it relies on method names to determine whether an expression has a boolean type or not.
@@ -41,94 +33,21 @@ import org.codenarc.rule.AbstractAstVisitorRule
  * @author Jean André Gauthier
  * @author Daniel Clausen
   */
-class SpockMissingAssertRule extends AbstractAstVisitorRule {
+class SpockMissingAssertRule extends AbstractSpockRule {
 
     String name = 'SpockMissingAssert'
     int priority = 3
-    String specificationSuperclassNames = '*Specification'
-    String specificationClassNames = null
     Class astVisitorClass = SpockMissingAssertAstVisitor
 }
 
-class SpockMissingAssertAstVisitor extends AbstractAstVisitor<SpockMissingAssertRule> {
-
-    private String currentLabel = null
-
-    private int nNestedStatements = 0
-
-    @Override
-    void visitDoWhileLoop(DoWhileStatement statement) {
-        visitIfInSpockClass {
-            updateCurrentLabel(statement)
-            handleNestedStatement {
-                super.visitDoWhileLoop(statement)
-            }
-        }
-    }
-
-    @Override
-    void visitForLoop(ForStatement statement) {
-        visitIfInSpockClass {
-            updateCurrentLabel(statement)
-            handleNestedStatement {
-                super.visitForLoop(statement)
-            }
-        }
-    }
-
-    @Override
-    void visitIfElse(IfStatement statement) {
-        visitIfInSpockClass {
-            updateCurrentLabel(statement)
-            handleNestedStatement {
-                super.visitIfElse(statement)
-            }
-        }
-    }
-
-    @Override
-    void visitSwitch(SwitchStatement statement) {
-        visitIfInSpockClass {
-            updateCurrentLabel(statement)
-            handleNestedStatement {
-                super.visitSwitch(statement)
-            }
-        }
-    }
-
-    @Override
-    void visitTryCatchFinally(TryCatchStatement statement) {
-        visitIfInSpockClass {
-            updateCurrentLabel(statement)
-            handleNestedStatement {
-                super.visitTryCatchFinally(statement)
-            }
-        }
-    }
-
-    @Override
-    void visitWhileLoop(WhileStatement statement) {
-        visitIfInSpockClass {
-            updateCurrentLabel(statement)
-            handleNestedStatement {
-                super.visitWhileLoop(statement)
-            }
-        }
-    }
+class SpockMissingAssertAstVisitor extends AbstractSpockAstVisitor<SpockMissingAssertRule> {
 
     @Override
     void visitConstructorOrMethod(MethodNode node, boolean isConstructor) {
-        visitIfInSpockClass {
-            resetCurrentLabel()
-            // Do not inspect fixture / helper methods
-            if (SpockUtil.isSpockFeatureMethod(node)) {
-                super.visitConstructorOrMethod(node, isConstructor)
-            }
+        // Do not inspect fixture / helper methods
+        if (SpockUtil.isSpockFeatureMethod(node)) {
+            super.visitConstructorOrMethod(node, isConstructor)
         }
-    }
-
-    private void resetCurrentLabel() {
-        currentLabel = null
     }
 
     @Override
@@ -143,20 +62,18 @@ class SpockMissingAssertAstVisitor extends AbstractAstVisitor<SpockMissingAssert
 
     @Override
     void visitExpressionStatement(ExpressionStatement statement) {
-        visitIfInSpockClass {
-            updateCurrentLabel(statement)
-            // Do not inspect content in with/verifyAll methods
-            if (isMethodsWithImplicitAssertionsExpression(statement)) {
-                return
-            }
-            boolean isInLabelWithImplicitAssertions = currentLabel in SpockUtil.LABELS_WITH_IMPLICIT_ASSERTIONS
-            boolean isInTopLevel = nNestedStatements == 0
-            boolean isBoolean = SpockUtil.isBooleanExpression(statement)
-            if (isInLabelWithImplicitAssertions && !isInTopLevel && isBoolean) {
-                addViolation(statement, "'${currentLabel}:' might contain a boolean expression in a nested statement, which is not implicitly asserted")
-            }
-            visitCollectionIterationMethods(statement)
+        updateCurrentLabel(statement)
+        // Do not inspect content in with/verifyAll methods
+        if (isMethodsWithImplicitAssertionsExpression(statement)) {
+            return
         }
+        boolean isInLabelWithImplicitAssertions = inImplicitAssertBlock
+        boolean isInTopLevel = nestingDepth == 0
+        boolean isBoolean = SpockUtil.isBooleanExpression(statement)
+        if (isInLabelWithImplicitAssertions && !isInTopLevel && isBoolean) {
+            addViolation(statement, "'${currentLabel}:' might contain a boolean expression in a nested statement, which is not implicitly asserted")
+        }
+        visitCollectionIterationMethods(statement)
     }
 
     private static boolean isMethodsWithImplicitAssertionsExpression(ExpressionStatement statement) {
@@ -180,31 +97,5 @@ class SpockMissingAssertAstVisitor extends AbstractAstVisitor<SpockMissingAssert
         var method = variableAndMethod.v2
         // Heuristic: assume that methods whose name matches METHODS_FOR_COLLECTION_ITERATION are equivalent to loops
         return method != null && SpockUtil.METHODS_FOR_COLLECTION_ITERATION.contains(method.value)
-    }
-
-    private void updateCurrentLabel(Statement statement) {
-        // Spock only treats top-level labels as blocks
-        if (nNestedStatements == 0) {
-            List<String> labels = statement.statementLabels
-            if (labels != null) {
-                Collection<String> spockLabels = labels.intersect(SpockUtil.SPOCK_LABELS)
-                if (spockLabels.size() > 0) {
-                    currentLabel = spockLabels.last()
-                }
-            }
-        }
-        super.visitStatement(statement)
-    }
-
-    private void handleNestedStatement(Closure callVisitorMethod) {
-        nNestedStatements++
-        callVisitorMethod()
-        nNestedStatements--
-    }
-
-    private void visitIfInSpockClass(Closure callVisitorMethod) {
-        if (SpockUtil.isSpockSpecification(currentClassNode, rule.specificationSuperclassNames, rule.specificationClassNames)) {
-            callVisitorMethod()
-        }
     }
 }

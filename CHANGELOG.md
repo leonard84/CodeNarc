@@ -6,6 +6,7 @@ TODO: Version 4.1.0  (xxx 2026)
 New Rules and RuleSets
 - #834: New **OneTopLevelClass** rule. ([rinsley](https://github.com/rinsley)
 - #835: Create new “spock” ruleset for Spock rules. Move three existing Spock rules into the new “spock” ruleset: `SpockIgnoreRestUsed`, `SpockMissingAssert`, `SpockUseVerifyEach`. NOTE: Disable those rules in the “junit” ruleset.
+- Add **SpockUnnecessaryAssert** rule, the inverse of **SpockMissingAssert**: it reports an `assert` without a message where Spock already applies an implicit condition. ([Leonard Brünings](https://github.com/leonard84))
 
 Updated/Enhanced Rules and Bug Fixes
 - #832: **ConfusingMethodNameRule** rule: Fix `ReadOnlyPropertyException` on Groovy 5 for a class with a field named `properties`. ([youdie006](https://github.com/youdie006))
@@ -16,6 +17,7 @@ Build, Infrastructure and Tests
 - `GenerateUtil`: Add `RULES_EXCLUDED_FROM_GENERATED_FILES`, the central list of the rules that the generated files must not list for a rule set, so a rule that has moved to another rule set is listed once, under its new rule set. ([Leonard Brünings](https://github.com/leonard84))
 - Drop the generation timestamp from the `codenarc-base-rules.properties` header, so that regenerating produces no spurious diff. ([Leonard Brünings](https://github.com/leonard84))
 - Regenerate the rule properties file, the rule index pages and the starter rule sets. They were out of date: the **OneTopLevelClass** rule was missing from `codenarc-base-rules.properties` (so `PropertiesFileRuleRegistry` could not resolve it by name) and from both rule index pages. ([Leonard Brünings](https://github.com/leonard84))
+- Add `AbstractSpockRule` and `AbstractSpockAstVisitor` as the shared base classes of the **spock** rule set. They hold the `specificationSuperclassNames` / `specificationClassNames` configuration, skip classes that are not Spock specifications, and track the current Spock block label, the nesting depth, the kind of the current method and the enclosing `with`/`verifyAll`/`verifyEach` closure. ([Leonard Brünings](https://github.com/leonard84))
 
 
 Version 4.0.0  (Jul 2026)
