@@ -33,6 +33,8 @@ class SpockMissingReasonRuleTest extends AbstractRuleTestCase<SpockMissingReason
         assert rule.name == 'SpockMissingReason'
         assert !rule.checkConditionalAnnotations
         assert rule.annotationNames == 'Ignore, PendingFeature, Isolated'
+        assert rule.reasonRegex == null
+        assert rule.reasonRegexAnnotationNames == 'Ignore, PendingFeature'
         assert rule.specificationSuperclassNames == '*Specification'
         assert rule.specificationClassNames == null
     }
@@ -420,6 +422,198 @@ class SpockMissingReasonRuleTest extends AbstractRuleTestCase<SpockMissingReason
     }
 
     //--------------------------------------------------------------------------
+    // reasonRegex configuration
+    //--------------------------------------------------------------------------
+
+    @Test
+    void reasonRegex_NotSet_ReasonContentIsNotChecked() {
+        final SOURCE = '''
+            class MySpec extends spock.lang.Specification {
+                @Ignore("flaky")
+                def "feature"() {
+                    expect: false
+                }
+            }
+        '''.stripIndent()
+        assertNoViolations(SOURCE)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ['SPOCK-1234', 'Flaky, see SPOCK-1234', 'SPOCK-1234 - flaky on Windows'])
+    void reasonRegex_ReasonMatchesAnywhere_NoViolations(String reason) {
+        final SOURCE = """
+            class MySpec extends spock.lang.Specification {
+                @Ignore("${reason}")
+                def "feature"() {
+                    expect: false
+                }
+            }
+        """.stripIndent()
+        rule.reasonRegex = /SPOCK-\d+/
+        assertNoViolations(SOURCE)
+    }
+
+    @Test
+    void reasonRegex_ReasonDoesNotMatch_SingleViolation() {
+        final SOURCE = '''
+            class MySpec extends spock.lang.Specification {
+                @Ignore("flaky")
+                def "feature"() {
+                    expect: false
+                }
+            }
+        '''.stripIndent()
+        rule.reasonRegex = /SPOCK-\d+/
+        assertSingleViolation(SOURCE, 3, '@Ignore', regexMessage('Ignore', /SPOCK-\d+/))
+    }
+
+    @Test
+    void reasonRegex_PendingFeatureReasonDoesNotMatch_SingleViolation() {
+        final SOURCE = '''
+            class MySpec extends spock.lang.Specification {
+                @PendingFeature(reason = "not implemented")
+                def "feature"() {
+                    expect: false
+                }
+            }
+        '''.stripIndent()
+        rule.reasonRegex = /SPOCK-\d+/
+        assertSingleViolation(SOURCE, 3, '@PendingFeature', regexMessage('PendingFeature', /SPOCK-\d+/))
+    }
+
+    @Test
+    void reasonRegex_ClassLevelReasonDoesNotMatch_SingleViolation() {
+        final SOURCE = '''
+            @Ignore("flaky")
+            class MySpec extends spock.lang.Specification {
+                def "feature"() {
+                    expect: false
+                }
+            }
+        '''.stripIndent()
+        rule.reasonRegex = /SPOCK-\d+/
+        assertSingleViolation(SOURCE, 2, '@Ignore', regexMessage('Ignore', /SPOCK-\d+/))
+    }
+
+    @Test
+    void reasonRegex_NoReasonAtAll_ReportsOnlyTheMissingReasonViolation() {
+        final SOURCE = '''
+            class MySpec extends spock.lang.Specification {
+                @Ignore
+                def "feature"() {
+                    expect: false
+                }
+            }
+        '''.stripIndent()
+        rule.reasonRegex = /SPOCK-\d+/
+        assertSingleViolation(SOURCE, 3, '@Ignore', featureMessage('Ignore'))
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ['@Ignore("flaky, see ${issue}")', '@Ignore(Reasons.FLAKY)'])
+    void reasonRegex_ReasonIsNotAStringLiteral_NoViolations(String annotation) {
+        final SOURCE = """
+            class MySpec extends spock.lang.Specification {
+                ${annotation}
+                def "feature"() {
+                    expect: false
+                }
+            }
+        """.stripIndent()
+        rule.reasonRegex = /SPOCK-\d+/
+        assertNoViolations(SOURCE)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ['@PendingFeatureIf(value = { os.windows }, reason = "no native lib")', '@Isolated("needs the shared port")'])
+    void reasonRegex_AnnotationNotOptedIn_NoViolations(String annotation) {
+        // checked for a stated reason, but absent from reasonRegexAnnotationNames
+        final SOURCE = """
+            class MySpec extends spock.lang.Specification {
+                ${annotation}
+                def "feature"() {
+                    expect: false
+                }
+            }
+        """.stripIndent()
+        rule.reasonRegex = /SPOCK-\d+/
+        rule.checkConditionalAnnotations = true
+        assertNoViolations(SOURCE)
+    }
+
+    @Test
+    void reasonRegex_ConditionalAnnotationOptedIn_SingleViolation() {
+        final SOURCE = '''
+            class MySpec extends spock.lang.Specification {
+                @IgnoreIf(value = { os.windows }, reason = "no native lib")
+                def "feature"() {
+                    expect: false
+                }
+            }
+        '''.stripIndent()
+        rule.reasonRegex = /SPOCK-\d+/
+        rule.reasonRegexAnnotationNames = 'Ignore, PendingFeature, IgnoreIf'
+        // reasonRegex only reaches an annotation that is checked in the first place
+        assertNoViolations(SOURCE)
+
+        rule.checkConditionalAnnotations = true
+        assertSingleViolation(SOURCE, 3, '@IgnoreIf', regexMessage('IgnoreIf', /SPOCK-\d+/))
+    }
+
+    @Test
+    void reasonRegex_CustomAnnotationNeedsExplicitOptIn_SingleViolation() {
+        final SOURCE = '''
+            class MySpec extends spock.lang.Specification {
+                @Quarantined("flaky")
+                def "feature"() {
+                    expect: false
+                }
+            }
+        '''.stripIndent()
+        rule.annotationNames = 'Ignore, Quarantined'
+        rule.reasonRegex = /SPOCK-\d+/
+        // being checked for a reason does not by itself subject the reason to reasonRegex
+        assertNoViolations(SOURCE)
+
+        rule.reasonRegexAnnotationNames = 'Ignore, Quarantined'
+        assertSingleViolation(SOURCE, 3, '@Quarantined', regexMessage('Quarantined', /SPOCK-\d+/))
+    }
+
+    @Test
+    void reasonRegex_NarrowedDown_NoViolationsForRemovedAnnotation() {
+        final SOURCE = '''
+            class MySpec extends spock.lang.Specification {
+                @PendingFeature(reason = "not implemented")
+                def "feature"() {
+                    expect: false
+                }
+            }
+        '''.stripIndent()
+        rule.reasonRegex = /SPOCK-\d+/
+        rule.reasonRegexAnnotationNames = 'Ignore'
+        assertNoViolations(SOURCE)
+    }
+
+    @Test
+    void reasonRegex_UrlPattern_SingleViolation() {
+        final SOURCE = '''
+            class MySpec extends spock.lang.Specification {
+                @Ignore("see https://github.com/CodeNarc/CodeNarc/issues/1")
+                def "first feature"() {
+                    expect: false
+                }
+
+                @Ignore("flaky")
+                def "second feature"() {
+                    expect: false
+                }
+            }
+        '''.stripIndent()
+        rule.reasonRegex = 'https?://'
+        assertSingleViolation(SOURCE, 8, '@Ignore', regexMessage('Ignore', 'https?://'))
+    }
+
+    //--------------------------------------------------------------------------
     // Specification detection
     //--------------------------------------------------------------------------
 
@@ -483,6 +677,10 @@ class SpockMissingReasonRuleTest extends AbstractRuleTestCase<SpockMissingReason
 
     private static String specificationMessage(String annotationName) {
         "@${annotationName} without a reason - state why the specification is disabled"
+    }
+
+    private static String regexMessage(String annotationName, String regex) {
+        "@${annotationName} reason does not match ${regex}"
     }
 
     private static String pendingMessage(String annotationName) {

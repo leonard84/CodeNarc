@@ -115,6 +115,13 @@ The advice in the message follows what the annotation actually means: `@Isolated
 must run in isolation rather than why it is disabled, and `@PendingFeature` asks why the feature is expected
 to fail rather than treating it as skipped.
 
+The *reasonRegex* property additionally requires the reason to match a pattern - set it to `SPOCK-\d+` to
+require an issue id, or to `https?://` to require a link.
+The reason has to *contain* a match, so `@Ignore("flaky on Windows, see SPOCK-1234")` satisfies `SPOCK-\d+`.
+It applies only to the annotations named in *reasonRegexAnnotationNames*, and only to a reason that is a `String`
+literal - the content of a GString or a constant reference cannot be inspected, so it always passes.
+An annotation with no reason at all is reported for the missing reason alone, never twice.
+
 Example of violations:
 
 ```
@@ -151,10 +158,29 @@ Example of violations:
     }
 ```
 
+Example of violations with *reasonRegex* set to `SPOCK-\d+`:
+
+```
+    @Isolated("needs the shared port")                      // no violation - not in reasonRegexAnnotationNames
+    class MySpec extends spock.lang.Specification {
+        @Ignore("flaky on Windows")                         // violation - the reason states no issue id
+        def "first feature"() {
+            expect: false
+        }
+
+        @Ignore("flaky on Windows, see SPOCK-1234")         // no violation
+        def "second feature"() {
+            expect: false
+        }
+    }
+```
+
 | Property                    | Description            | Default Value    |
 |-----------------------------|------------------------|------------------|
-| annotationNames             | Specifies one or more (comma-separated) simple annotation names that must state a reason. Teams can add their own project-specific skip annotations here. For an annotation that is not one of the built-in Spock ones, a value in either the `value` or the `reason` member counts as a reason. | "Ignore, PendingFeature, PendingFeatureIf, Isolated" |
-| checkConditionalAnnotations | If `true`, `@Requires` and `@IgnoreIf` must state a `reason` as well. | `false` |
+| annotationNames             | Specifies one or more (comma-separated) simple annotation names that must state a reason. Teams can add their own project-specific skip annotations here. For an annotation that is not one of the built-in Spock ones, a value in either the `value` or the `reason` member counts as a reason. Has no effect on the conditional annotations, which *checkConditionalAnnotations* governs on its own. | "Ignore, PendingFeature, Isolated" |
+| checkConditionalAnnotations | If `true`, the conditional annotations - `@Requires`, `@IgnoreIf` and `@PendingFeatureIf` - must state a `reason` as well. | `false` |
+| reasonRegex                 | If set, a stated reason must contain a match for this regular expression - use it to require an issue id (`SPOCK-\d+`) or a link (`https?://`). Unset by default, which leaves the content of a reason unchecked. Only a reason that is a `String` literal is matched. | `null` |
+| reasonRegexAnnotationNames  | Specifies one or more (comma-separated) simple annotation names that *reasonRegex* applies to; only relevant when that property is set. The conditional annotations and `@Isolated` are excluded by default: their reason explains a standing condition (`@IgnoreIf(value = { os.windows }, reason = "no native lib on Windows")`) or an execution constraint (`@Isolated("needs the shared port")`), which is not work to be tracked. | "Ignore, PendingFeature" |
 | specificationClassNames     | Specifies one or more (comma-separated) class names that should be treated as Spock Specification classes. The class names may optionally contain wildcards (*,?), e.g. "*Spec". | `null` |
 | specificationSuperclassNames| Specifies one or more (comma-separated) class names that should be treated as Spock Specification superclasses. In other words, a class that extends a matching class name is considered a Spock Specification . The class names may optionally contain wildcards (*,?), e.g. "*Spec". | "*Specification" |
 

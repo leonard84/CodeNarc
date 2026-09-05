@@ -36,6 +36,9 @@ import org.codehaus.groovy.ast.expr.Expression
  * as <code>@IgnoreIf({ os.windows })</code> does not need one. They are therefore only checked when
  * <code>checkConditionalAnnotations</code> is enabled.
  *
+ * <code>reasonRegex</code> additionally requires the reason to match a pattern, such as an issue id or a
+ * link, for the annotations named in <code>reasonRegexAnnotationNames</code>.
+ *
  * @Retry is deliberately not handled here; it has no reason member.
  *
  * @author Leonard Bruenings
@@ -58,6 +61,22 @@ class SpockMissingReasonRule extends AbstractSpockRule {
      * <code>annotationNames</code> has no effect.
      */
     boolean checkConditionalAnnotations = false
+
+    /**
+     * If set, a stated reason must contain a match for this regular expression - use it to require an issue
+     * id (<code>SPOCK-\d+</code>) or a link (<code>https?://</code>). Unset by default, which leaves the
+     * content of a reason unchecked.
+     */
+    String reasonRegex
+
+    /**
+     * The (comma-separated) simple names of the annotations that <code>reasonRegex</code> applies to; only
+     * relevant when that property is set. The conditional annotations and <code>@Isolated</code> are excluded
+     * by default: their reason explains a standing condition
+     * (<code>@IgnoreIf(value = { os.windows }, reason = 'no native lib on Windows')</code>) or an execution
+     * constraint (<code>@Isolated('needs the shared port')</code>), which is not work to be tracked.
+     */
+    String reasonRegexAnnotationNames = 'Ignore, PendingFeature'
 }
 
 class SpockMissingReasonAstVisitor extends AbstractSpockAstVisitor<SpockMissingReasonRule> {
@@ -130,23 +149,56 @@ class SpockMissingReasonAstVisitor extends AbstractSpockAstVisitor<SpockMissingR
         } else if (!(simpleName in configuredAnnotationNames())) {
             return
         }
-        if (hasReason(annotation, simpleName)) {
+        Expression reason = findStatedReason(annotation, simpleName)
+        if (reason == null) {
+            addViolation(annotation, "@${simpleName} without a reason - ${adviceFor(simpleName, target)}")
             return
         }
-        addViolation(annotation, "@${simpleName} without a reason - ${adviceFor(simpleName, target)}")
+        checkReasonAgainstRegex(annotation, simpleName, reason)
     }
 
     private static String adviceFor(String simpleName, String target) {
         return String.format(ADVICE[simpleName] ?: DEFAULT_ADVICE, target)
     }
 
-    private List<String> configuredAnnotationNames() {
-        rule.annotationNames?.tokenize(',')*.trim()?.findAll { it } ?: []
+    /**
+     * Reports a stated reason that does not match <code>reasonRegex</code>. Only called for an annotation
+     * that is already being checked, so listing a conditional annotation in
+     * <code>reasonRegexAnnotationNames</code> has no effect unless <code>checkConditionalAnnotations</code>
+     * is enabled as well.
+     */
+    private void checkReasonAgainstRegex(AnnotationNode annotation, String simpleName, Expression reason) {
+        if (!rule.reasonRegex || !(simpleName in configuredNames(rule.reasonRegexAnnotationNames))) {
+            return
+        }
+        // Only a String literal can be matched. The value of a GString or a constant reference is unknown at
+        // the CONVERSION compiler phase, so it counts as satisfied
+        if (!(reason instanceof ConstantExpression)) {
+            return
+        }
+        String statedReason = (reason as ConstantExpression).value
+        if (!(statedReason =~ rule.reasonRegex)) {
+            addViolation(annotation, "@${simpleName} reason does not match ${rule.reasonRegex}")
+        }
     }
 
-    private static boolean hasReason(AnnotationNode annotation, String simpleName) {
+    private List<String> configuredAnnotationNames() {
+        configuredNames(rule.annotationNames)
+    }
+
+    private static List<String> configuredNames(String value) {
+        value?.tokenize(',')*.trim()?.findAll { it } ?: []
+    }
+
+    /**
+     * The expression that states the reason, or null when none of the reason members holds one.
+     */
+    private static Expression findStatedReason(AnnotationNode annotation, String simpleName) {
         List<String> members = REASON_MEMBERS.containsKey(simpleName) ? [REASON_MEMBERS[simpleName]] : FALLBACK_REASON_MEMBERS
-        return members.any { String member -> isReasonStated(SpockUtil.getAnnotationMember(annotation, member)) }
+        return members.findResult { String member ->
+            Expression expression = SpockUtil.getAnnotationMember(annotation, member)
+            isReasonStated(expression) ? expression : null
+        }
     }
 
     private static boolean isReasonStated(Expression expression) {
