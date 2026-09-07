@@ -148,6 +148,84 @@ Example of violations:
 | specificationSuperclassNames| Specifies one or more (comma-separated) class names that should be treated as Spock Specification superclasses. In other words, a class that extends a matching class name is considered a Spock Specification . The class names may optionally contain wildcards (*,?), e.g. "*Spec". | "*Specification" |
 
 
+## SpockUnnecessaryUnroll Rule
+
+*Since CodeNarc 4.1.0*
+
+Spock 2 unrolls data-driven features by default, so an `@Unroll` without a value is a no-op left over from
+Spock 1.x. It is common in migrated code bases, where it is both noise and misleading to the next reader.
+
+This rule reports an `@Unroll` with no member value, on a feature method or on a *Specification* class. An
+`@Unroll("...")` or `@Unroll(value = "...")` carries the iteration-name template and is never reported.
+`@Unroll("")` is *not* such a template: `Unroll.value()` already defaults to the empty String and Spock only uses a
+pattern when it is non-empty, so that form is reported like the bare one. A member value that cannot be evaluated
+from the source, such as a reference to a constant, is not reported.
+
+The rule stays silent wherever a bare `@Unroll` still has an effect, that is when the *Specification* class that
+declares the feature carries `@Rollup` - the bare `@Unroll` then re-enables unrolling for that one feature.
+
+A `@Rollup` on a *superclass* does not count. Spock applies `@Unroll` and `@Rollup` per declaring class - neither is
+inheritable - so a base specification's `@Rollup` covers only the features that base specification declares itself.
+
+A `@Rollup` next to the `@Unroll` it would cancel out does not count either. Spock rejects that combination with an
+`InvalidSpecException`, on a feature method as well as on a class, so such a specification cannot run in the first
+place.
+
+`@Rollup` on its own, and an `@Unroll` on anything that is not a feature method (a helper method, for example),
+are never reported either.
+
+Example of violations:
+
+```
+    @Unroll                                                      // violation - redundant on the class as well
+    class MySpec extends spock.lang.Specification {
+        @Unroll                                                  // violation - Spock 2 unrolls by default
+        def "node version #version parses"() {
+            expect: parse(version)
+            where: version << ['1.0', '2.0']
+        }
+
+        @Unroll()                                                // violation - an empty member list is still bare
+        def "another #version parses"() {
+            expect: parse(version)
+            where: version << ['1.0', '2.0']
+        }
+
+        @Unroll("")                                              // violation - the empty String is not a template
+        def "yet another #version parses"() {
+            expect: parse(version)
+            where: version << ['1.0', '2.0']
+        }
+
+        @Unroll("#operator on #a and #b yields #expected")       // no violation - carries the iteration name
+        def "arithmetic operators evaluate their operands"() {
+            expect: evaluate(operator, a, b) == expected
+            where: operator | a | b | expected
+                   '+'      | 1 | 2 | 3
+        }
+    }
+
+    @Rollup
+    class RolledUpSpec extends spock.lang.Specification {
+        @Unroll                                                  // no violation - re-enables unrolling for this feature
+        def "node version #version parses"() {
+            expect: parse(version)
+            where: version << ['1.0', '2.0']
+        }
+    }
+```
+
+| Property                    | Description            | Default Value    |
+|-----------------------------|------------------------|------------------|
+| specificationClassNames     | Specifies one or more (comma-separated) class names that should be treated as Spock Specification classes. The class names may optionally contain wildcards (*,?), e.g. "*Spec". | `null` |
+| specificationSuperclassNames| Specifies one or more (comma-separated) class names that should be treated as Spock Specification superclasses. In other words, a class that extends a matching class name is considered a Spock Specification . The class names may optionally contain wildcards (*,?), e.g. "*Spec". | "*Specification" |
+
+**NOTE:** This rule assumes Spock 2 or later, where data-driven features are unrolled by default. On Spock 1.x every
+bare `@Unroll` has an effect, so disable this rule there. A project can also flip the default the other way round,
+with `unroll { ... }` / `runner { rollup ... }` in *SpockConfig.groovy*, which CodeNarc does not see; disable this
+rule there too.
+
+
 ## SpockUseVerifyEach Rule
 
 *Since CodeNarc 3.7.0*

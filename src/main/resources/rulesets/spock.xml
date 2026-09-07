@@ -11,6 +11,7 @@
     <rule class='org.codenarc.rule.spock.SpockIgnoreRestUsedRule'/>
     <rule class='org.codenarc.rule.spock.SpockMissingAssertRule'/>
     <rule class='org.codenarc.rule.spock.SpockUnnecessaryAssertRule'/>
+    <rule class='org.codenarc.rule.spock.SpockUnnecessaryUnrollRule'/>
     <rule class='org.codenarc.rule.spock.SpockUseVerifyEachRule'/>
 
 </ruleset>
