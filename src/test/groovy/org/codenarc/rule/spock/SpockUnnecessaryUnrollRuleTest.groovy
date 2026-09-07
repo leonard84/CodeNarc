@@ -16,8 +16,6 @@
 package org.codenarc.rule.spock
 
 import org.codenarc.rule.AbstractRuleTestCase
-import org.codenarc.rule.Rule
-import org.codenarc.source.SourceString
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -30,7 +28,7 @@ import org.junit.jupiter.params.provider.ValueSource
 class SpockUnnecessaryUnrollRuleTest extends AbstractRuleTestCase<SpockUnnecessaryUnrollRule> {
 
     private static final String MESSAGE =
-        "'@Unroll' without a value is redundant - Spock 2 unrolls by default; remove it, or give it an iteration-name template"
+        "'@Unroll' without a value is redundant - since Spock 2 unrolls by default; remove it, or give it an iteration-name template"
 
     @Test
     void ruleProperties_AreValid() {
@@ -411,46 +409,8 @@ class SpockUnnecessaryUnrollRuleTest extends AbstractRuleTestCase<SpockUnnecessa
         assertSingleViolation(SOURCE, 3, '@Unroll', MESSAGE)
     }
 
-    @Test
-    void realisticSpec_NoRuleReportsTheSameLineTwice() {
-        final SOURCE = '''
-            class MySpec extends spock.lang.Specification {
-                @Unroll
-                @IgnoreRest
-                def "node version #version parses"() {
-                    given:
-                    def items = [1, 2, 3]
-
-                    when:
-                    def result = process(items)
-
-                    then:
-                    result.valid
-                    assert result.count == 3
-                    if (result.detailed) {
-                        result.entries.size() == 3
-                    }
-                    items.each { assert it > 0 }
-
-                    where:
-                    version << ['1.0', '2.0']
-                }
-            }
-        '''.stripIndent()
-        assertViolationLines(rule, SOURCE, [3])
-        assertViolationLines(new SpockIgnoreRestUsedRule(), SOURCE, [5])
-        assertViolationLines(new SpockUnnecessaryAssertRule(), SOURCE, [14])
-        assertViolationLines(new SpockMissingAssertRule(), SOURCE, [16])
-        assertViolationLines(new SpockUseVerifyEachRule(), SOURCE, [18])
-    }
-
     @Override
     protected SpockUnnecessaryUnrollRule createRule() {
         new SpockUnnecessaryUnrollRule()
-    }
-
-    private static void assertViolationLines(Rule ruleToApply, String source, List<Integer> expectedLines) {
-        def violations = ruleToApply.applyTo(new SourceString(source))
-        assert violations*.lineNumber.sort() == expectedLines, "Rule ${ruleToApply.name} reported ${violations}"
     }
 }

@@ -34,10 +34,6 @@ import org.codehaus.groovy.ast.expr.Expression
  * class, and neither annotation is inheritable. A `@Rollup` next to the `@Unroll` it would cancel out is
  * not considered either, because Spock rejects that combination with an InvalidSpecException.
  *
- * This is a priority 3 rule because it relies on assumptions that CodeNarc cannot verify from a single
- * source file: that the project uses Spock 2 or later, and that it does not turn unrolling off globally
- * in *SpockConfig.groovy*. Projects that do either should disable this rule.
- *
  * @author Leonard Bruenings
  */
 class SpockUnnecessaryUnrollRule extends AbstractSpockRule {
@@ -52,7 +48,7 @@ class SpockUnnecessaryUnrollAstVisitor extends AbstractSpockAstVisitor<SpockUnne
     private static final String UNROLL = 'Unroll'
     private static final String ROLLUP = 'Rollup'
     private static final String MESSAGE =
-        "'@Unroll' without a value is redundant - Spock 2 unrolls by default; remove it, or give it an iteration-name template"
+        "'@Unroll' without a value is redundant - since Spock 2 unrolls by default; remove it, or give it an iteration-name template"
 
     @Override
     protected void visitClassEx(ClassNode node) {
