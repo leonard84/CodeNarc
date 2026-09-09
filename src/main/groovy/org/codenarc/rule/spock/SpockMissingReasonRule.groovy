@@ -46,12 +46,13 @@ import org.codehaus.groovy.ast.expr.Expression
 class SpockMissingReasonRule extends AbstractSpockRule {
 
     String name = 'SpockMissingReason'
-    int priority = 2
+    int priority = 3
     Class astVisitorClass = SpockMissingReasonAstVisitor
 
     /**
      * The (comma-separated) simple names of the skip annotations that must state a reason. Teams can add
-     * their own project-specific skip annotations here.
+     * their own project-specific skip annotations here. Setting this property replaces the default list, so
+     * include <code>Ignore, PendingFeature, Isolated</code> if those should still be checked.
      */
     String annotationNames = 'Ignore, PendingFeature, Isolated'
 
@@ -74,7 +75,9 @@ class SpockMissingReasonRule extends AbstractSpockRule {
      * relevant when that property is set. The conditional annotations and <code>@Isolated</code> are excluded
      * by default: their reason explains a standing condition
      * (<code>@IgnoreIf(value = { os.windows }, reason = 'no native lib on Windows')</code>) or an execution
-     * constraint (<code>@Isolated('needs the shared port')</code>), which is not work to be tracked.
+     * constraint (<code>@Isolated('needs the shared port')</code>), which is not work to be tracked. Setting
+     * this property replaces the default list, so include <code>Ignore, PendingFeature</code> if those
+     * should still be checked.
      */
     String reasonRegexAnnotationNames = 'Ignore, PendingFeature'
 }

@@ -29,7 +29,7 @@ class SpockMissingReasonRuleTest extends AbstractRuleTestCase<SpockMissingReason
 
     @Test
     void ruleProperties_AreValid() {
-        assert rule.priority == 2
+        assert rule.priority == 3
         assert rule.name == 'SpockMissingReason'
         assert !rule.checkConditionalAnnotations
         assert rule.annotationNames == 'Ignore, PendingFeature, Isolated'
@@ -294,7 +294,7 @@ class SpockMissingReasonRuleTest extends AbstractRuleTestCase<SpockMissingReason
     }
 
     @Test
-    void ignoreIf_CheckConditionalAnnotationsEnabled_SingleViolation() {
+    void ignoreIf_CheckConditionalAnnotationsEnabled() {
         final SOURCE = '''
             class MySpec extends spock.lang.Specification {
                 @IgnoreIf({ os.windows })
@@ -310,7 +310,7 @@ class SpockMissingReasonRuleTest extends AbstractRuleTestCase<SpockMissingReason
     }
 
     @Test
-    void pendingFeatureIf_CheckConditionalAnnotationsEnabled_SingleViolation() {
+    void pendingFeatureIf_CheckConditionalAnnotationsEnabled() {
         final SOURCE = '''
             class MySpec extends spock.lang.Specification {
                 @PendingFeatureIf({ os.windows })
@@ -377,7 +377,7 @@ class SpockMissingReasonRuleTest extends AbstractRuleTestCase<SpockMissingReason
     //--------------------------------------------------------------------------
 
     @Test
-    void annotationNames_CustomAnnotation_SingleViolation() {
+    void annotationNames_CustomAnnotation() {
         final SOURCE = '''
             class MySpec extends spock.lang.Specification {
                 @Quarantined
@@ -542,7 +542,7 @@ class SpockMissingReasonRuleTest extends AbstractRuleTestCase<SpockMissingReason
     }
 
     @Test
-    void reasonRegex_ConditionalAnnotationOptedIn_SingleViolation() {
+    void reasonRegex_ConditionalAnnotationOptedIn() {
         final SOURCE = '''
             class MySpec extends spock.lang.Specification {
                 @IgnoreIf(value = { os.windows }, reason = "no native lib")
@@ -561,7 +561,7 @@ class SpockMissingReasonRuleTest extends AbstractRuleTestCase<SpockMissingReason
     }
 
     @Test
-    void reasonRegex_CustomAnnotationNeedsExplicitOptIn_SingleViolation() {
+    void reasonRegex_CustomAnnotationNeedsExplicitOptIn() {
         final SOURCE = '''
             class MySpec extends spock.lang.Specification {
                 @Quarantined("flaky")
@@ -651,7 +651,7 @@ class SpockMissingReasonRuleTest extends AbstractRuleTestCase<SpockMissingReason
     }
 
     @Test
-    void specificationClassNames_SpecSuffix_SingleViolation() {
+    void specificationClassNames_SpecSuffix() {
         final SOURCE = '''
             class MySpec {
                 @Ignore
